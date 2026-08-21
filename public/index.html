@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PoE2 Market — Path of Exile 2 economy tracker</title>
+<meta name="description" content="Live Path of Exile 2 economy: the most expensive uniques, currency exchange rates and market statistics." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#128176;</text></svg>" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__inner">
+      <a class="brand" href="#/overview">
+        <span class="brand__mark" aria-hidden="true"></span>
+        <span class="brand__name">PoE2 <span>Market</span></span>
+      </a>
+
+      <div class="rates" id="rates" aria-live="polite"></div>
+
+      <div class="topbar__actions">
+        <label class="select">
+          <span class="sr-only">League</span>
+          <select id="league"></select>
+        </label>
+        <button class="icon-btn" id="refresh" title="Refresh data" aria-label="Refresh data">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 4v5h-5"/></svg>
+        </button>
+        <button class="icon-btn" id="theme" title="Toggle theme" aria-label="Toggle theme">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <nav class="tabs" id="tabs" aria-label="Sections">
+      <a href="#/overview" data-view="overview">Overview</a>
+      <a href="#/uniques" data-view="uniques">Uniques</a>
+      <a href="#/currency" data-view="currency">Currency</a>
+      <a href="#/stats" data-view="stats">Statistics</a>
+    </nav>
+  </header>
+
+  <main id="app" class="app">
+    <div class="loading" id="boot">
+      <div class="spinner" aria-hidden="true"></div>
+      <p>Loading the Wraeclast economy…</p>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>
+      Data from <a href="https://poe.ninja/poe2" target="_blank" rel="noreferrer noopener">poe.ninja</a>,
+      rebuilt on a schedule. Prices are league-wide averages, not offers.
+      Not affiliated with Grinding Gear Games.
+    </p>
+    <p id="stamp" class="footer__stamp"></p>
+  </footer>
+
+  <div class="drawer" id="drawer" hidden>
+    <div class="drawer__scrim" data-close></div>
+    <aside class="drawer__panel" role="dialog" aria-modal="true" aria-label="Item details">
+      <button class="drawer__close icon-btn" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      <div id="drawer-body"></div>
+    </aside>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

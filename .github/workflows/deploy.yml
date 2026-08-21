@@ -1,0 +1,48 @@
+name: Refresh data and deploy
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Every 30 minutes. GitHub queues cron jobs on a best-effort basis, so treat
+    # this as "roughly half-hourly" rather than a guarantee.
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+# Allow one deploy at a time; let a running one finish rather than cancelling it
+# half-published.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # No dependencies to install — the build and the site are both plain Node/ESM.
+      - name: Fetch the economy
+        run: node scripts/snapshot.js
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

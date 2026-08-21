@@ -1,0 +1,160 @@
+import { el, fmt, compact, priceLabel, priceCell, listingLabel, deltaEl, sparkline, itemCell, section, statTile } from '../util.js';
+import { createTable } from '../table.js';
+import { openDetail } from '../detail.js';
+import { items, currency, rates, findCurrency, liquid, meaningful } from '../store.js';
+
+export function renderOverview() {
+  const r = rates();
+  const all = items();
+  const cur = currency();
+  const tradeable = liquid(all, 3);
+  const top = tradeable.slice(0, 12);
+
+  const mirror = findCurrency('Mirror of Kalandra');
+  const turnover = cur.reduce((sum, c) => sum + (c.volumeDivine ?? 0), 0);
+
+  const page = el('div');
+
+  page.append(
+    el('div', { class: 'page-head' }, [
+      el('h1', { text: 'The state of the economy' }),
+      el('p', {
+        text: 'Every price below is a league-wide average from poe.ninja, quoted in Divine Orbs. Click any row to see the full item.'
+      })
+    ])
+  );
+
+  /* ---- headline numbers ---- */
+  page.append(
+    el('div', { class: 'grid grid--4', style: 'margin-bottom:44px' }, [
+      statTile('Divine Orb', fmt(r.exalted), 'ex', `also worth ${fmt(r.chaos)} chaos`),
+      statTile(
+        'Mirror of Kalandra',
+        mirror ? fmt(mirror.divine) : '—',
+        'div',
+        mirror ? `${mirror.change > 0 ? '+' : ''}${mirror.change.toFixed(1)}% over 7 days` : 'not traded'
+      ),
+      statTile(
+        'Priciest unique',
+        top[0] ? fmt(top[0].divine) : '—',
+        'div',
+        top[0] ? top[0].name : ''
+      ),
+      statTile('Weekly turnover', compact(turnover), 'div', 'across every tracked currency market')
+    ])
+  );
+
+  /* ---- podium ---- */
+  if (top.length >= 3) {
+    page.append(
+      section(
+        'The chase list',
+        'Most expensive uniques with at least three active listings',
+        el('div', {}, [
+          el(
+            'div',
+            { class: 'podium' },
+            top.slice(0, 3).map((it, i) =>
+              el('div', { class: 'podium__card', onclick: () => openDetail(it) }, [
+                el('div', { class: 'podium__rank', text: `#${i + 1}` }),
+                it.icon && el('img', { class: 'podium__icon', src: it.icon, alt: '', loading: 'lazy' }),
+                el('div', { class: 'podium__name', text: it.name }),
+                el('div', { class: 'podium__base', text: it.baseType }),
+                el('div', { class: 'podium__price', text: `${fmt(it.divine)} div` }),
+                el('div', { class: 'podium__base', text: `${listingLabel(it.listings)} listed` })
+              ])
+            )
+          ),
+          topTable(top.slice(3), r)
+        ])
+      )
+    );
+  }
+
+  /* ---- movers ---- */
+  const movable = [...tradeable, ...cur].filter(
+    (x) => meaningful(x) && x.spark?.length > 2 && Math.abs(x.change) > 0.5
+  );
+  const gainers = [...movable].sort((a, b) => b.change - a.change).slice(0, 7);
+  const losers = [...movable].sort((a, b) => a.change - b.change).slice(0, 7);
+
+  page.append(
+    section(
+      'Seven days of movement',
+      'Sharpest price swings across uniques and currency',
+      el('div', { class: 'grid grid--2' }, [
+        moverCard('Climbing', gainers, r),
+        moverCard('Sliding', losers, r)
+      ])
+    )
+  );
+
+  /* ---- busiest markets ---- */
+  const busiest = [...cur].sort((a, b) => b.volumeDivine - a.volumeDivine).slice(0, 8);
+  page.append(
+    section(
+      'Where the money moves',
+      'Currencies by total value traded this week',
+      el('div', { class: 'card' }, [
+        el(
+          'div',
+          { class: 'rows' },
+          busiest.map((c) =>
+            el('div', { class: 'row clickable', onclick: () => openDetail(c) }, [
+              c.icon && el('img', { class: 'row__icon', src: c.icon, alt: '', loading: 'lazy' }),
+              el('div', { class: 'row__main' }, [
+                el('div', { class: 'row__label', text: c.name }),
+                el('div', { class: 'row__sub', text: `${fmt(c.volumeDivine)} div traded` })
+              ]),
+              el('div', { class: 'price', text: priceLabel(c.divine, r) }),
+              deltaEl(c.change)
+            ])
+          )
+        )
+      ])
+    )
+  );
+
+  return page;
+}
+
+function topTable(rows, r) {
+  return createTable({
+    columns: [
+      { key: 'rank', label: '', sortable: false, render: (_, i) => el('span', { class: 'rank', text: `#${i + 4}` }) },
+      { key: 'name', label: 'Item', value: (x) => x.name, render: (x) => itemCell(x) },
+      { key: 'slot', label: 'Slot', hide: true, value: (x) => x.slot, render: (x) => el('span', { class: 'tag', text: x.slot || '—' }) },
+      { key: 'listings', label: 'Listed', align: 'right', hide: true, render: (x) => el('span', { class: 'num', text: listingLabel(x.listings) }) },
+      { key: 'change', label: '7 days', align: 'right', hide: true, render: (x) => deltaEl(x.change) },
+      { key: 'divine', label: 'Price', align: 'right', render: (x) => priceCell(x.divine, r) }
+    ],
+    rows,
+    sortKey: 'divine',
+    onRow: openDetail,
+    limit: 9
+  });
+}
+
+function moverCard(title, rows, r) {
+  return el('div', { class: 'card' }, [
+    el('p', { class: 'card__title', text: title }),
+    el(
+      'div',
+      { class: 'rows' },
+      rows.length
+        ? rows.map((x) =>
+            el('div', { class: 'row clickable', onclick: () => openDetail(x) }, [
+              x.icon && el('img', { class: 'row__icon', src: x.icon, alt: '', loading: 'lazy' }),
+              el('div', { class: 'row__main' }, [
+                el('div', { class: 'row__label', text: x.name }),
+                el('div', { class: 'row__sub', text: x.baseType || x.category })
+              ]),
+              sparkline(x.spark, x.change),
+              el('div', { class: 'price', text: priceLabel(x.divine, r) }),
+              deltaEl(x.change)
+            ])
+          )
+        : el('div', { class: 'empty', text: 'No meaningful movement.' })
+    )
+  ]);
+}
