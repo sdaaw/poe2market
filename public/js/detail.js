@@ -1,5 +1,6 @@
 import { el, clear, fmt, compact, listingLabel, deltaEl, sparkline } from './util.js';
-import { rates } from './store.js';
+import { rates, slugFor } from './store.js';
+import { goToItem, leaveItem } from './router.js';
 import { loadHistory, seriesFor, daysRecorded } from './history.js';
 import { priceChart, chartSummary } from './chart.js';
 
@@ -13,8 +14,15 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeDetail();
 });
 
-export function closeDetail() {
+/** Hides the panel without touching the URL — for the router to call. */
+export function hideDetail() {
   drawer.hidden = true;
+}
+
+/** A reader dismissing the panel: navigate, and let the router do the hiding. */
+export function closeDetail() {
+  if (drawer.hidden) return;
+  leaveItem();
 }
 
 function modBlock(title, list, className) {
@@ -25,8 +33,17 @@ function modBlock(title, list, className) {
   ]);
 }
 
-/** Side panel with the full item card: prices, mods, trend and flavour text. */
+/**
+ * Opening an item is a navigation, so it lands in history and can be linked.
+ * The router calls showDetail once the URL settles; if the URL already points
+ * here (a re-click) there is no hashchange to wait for, so render now.
+ */
 export function openDetail(entry) {
+  if (!goToItem(slugFor(entry))) showDetail(entry);
+}
+
+/** Side panel with the full item card: prices, mods, trend and flavour text. */
+export function showDetail(entry) {
   const r = rates();
   const ex = entry.divine * r.exalted;
   const chaos = entry.divine * r.chaos;
@@ -147,3 +164,47 @@ async function renderHistory(slot, entry) {
     ])
   );
 }
+
+/* ---------- copy link ---------- */
+
+const copyBtn = document.getElementById('copy-link');
+let copyReset = null;
+
+/**
+ * The async clipboard API needs a secure context and an unblocked permission,
+ * and quietly rejects otherwise. Falling back to a throwaway textarea keeps the
+ * button working rather than telling the reader to do it by hand.
+ */
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // fall through
+  }
+
+  const scratch = el('textarea', { value: text, 'aria-hidden': 'true' });
+  scratch.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+  document.body.append(scratch);
+  scratch.select();
+  let ok = false;
+  try {
+    ok = document.execCommand('copy');
+  } catch {
+    ok = false;
+  }
+  scratch.remove();
+  return ok;
+}
+
+copyBtn.addEventListener('click', async () => {
+  const ok = await copyText(location.href);
+  copyBtn.classList.toggle('is-done', ok);
+  copyBtn.title = ok ? 'Link copied' : 'Could not copy — use the address bar';
+
+  clearTimeout(copyReset);
+  copyReset = setTimeout(() => {
+    copyBtn.classList.remove('is-done');
+    copyBtn.title = 'Copy link to this item';
+  }, 1600);
+});

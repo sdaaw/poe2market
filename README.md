@@ -127,6 +127,21 @@ mechanic and are tagged `general`.
 The logic lives in `public/js/analysis.js`, kept DOM-free so it can be run and
 checked straight from Node.
 
+## Linkable items
+
+Every item has a URL. Opening one appends it to the current view
+(`#/uniques?item=armour-temporalis-silk-robe`) rather than routing to a page of
+its own, so a shared link drops the reader onto the list they'd have been looking
+at, and closing the panel leaves them there. The panel has a copy-link button.
+
+- Ids come from the entry's composite key, not its display name, which keeps the
+  two Temporalis variants apart — verified collision-free across all 1,378 entries.
+- Opening an item deliberately does **not** re-render the page underneath;
+  otherwise a click would discard the reader's filters and scroll position.
+- Back closes the panel, forward reopens it, Escape and the close button navigate
+  rather than just hiding, so the URL never disagrees with the screen.
+- A stale or unknown id drops the parameter instead of leaving a dead URL.
+
 ## Price history
 
 poe.ninja gives seven sparkline points and nothing older, so the site keeps its

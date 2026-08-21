@@ -100,3 +100,28 @@ export const meaningful = (x) =>
   x.kind === 'item'
     ? (x.listings ?? 0) >= 10 && x.divine >= 0.05
     : (x.volumeDivine ?? 0) >= 50 && x.divine >= 0.01;
+
+/* ---------- stable ids for links ---------- */
+
+/**
+ * A URL-safe id for one entry. Derived from the composite key rather than the
+ * display name, which keeps the two Temporalis variants distinct — verified
+ * collision-free across every tracked entry.
+ */
+export const slugFor = (entry) =>
+  entry.key.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+let slugIndex = null;
+let indexedSnapshot = null;
+
+/** Resolves a slug from the URL back to its entry, rebuilding when the league changes. */
+export function findBySlug(slug) {
+  if (!slug || !state.snapshot) return null;
+
+  if (indexedSnapshot !== state.snapshot) {
+    slugIndex = new Map();
+    for (const entry of [...items(), ...currency()]) slugIndex.set(slugFor(entry), entry);
+    indexedSnapshot = state.snapshot;
+  }
+  return slugIndex.get(slug) ?? null;
+}

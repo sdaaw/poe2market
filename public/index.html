@@ -65,9 +65,14 @@
   <div class="drawer" id="drawer" hidden>
     <div class="drawer__scrim" data-close></div>
     <aside class="drawer__panel" role="dialog" aria-modal="true" aria-label="Item details">
-      <button class="drawer__close icon-btn" data-close aria-label="Close">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
-      </button>
+      <div class="drawer__actions">
+        <button class="icon-btn" id="copy-link" title="Copy link to this item" aria-label="Copy link to this item">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19"/></svg>
+        </button>
+        <button class="icon-btn" data-close aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
       <div id="drawer-body"></div>
     </aside>
   </div>

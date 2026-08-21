@@ -308,9 +308,10 @@ button { font: inherit; color: inherit; }
 }
 @keyframes fade { from { opacity: 0; } }
 @keyframes slide { from { transform: translateX(24px); opacity: 0; } }
-.drawer__close { position: absolute; top: 18px; right: 18px; }
 
-.detail__head { display: flex; gap: 16px; align-items: center; margin-bottom: 18px; padding-right: 36px; }
+
+/* Clears both floating buttons (copy + close) in the panel's top-right corner. */
+.detail__head { display: flex; gap: 16px; align-items: center; margin-bottom: 18px; padding-right: 80px; }
 .detail__icon { width: 64px; height: 64px; object-fit: contain; flex-shrink: 0; }
 .detail__name { color: var(--accent); font-size: 18px; font-weight: 600; line-height: 1.2; }
 .detail__base { color: var(--muted); font-size: 13px; }
@@ -569,3 +570,6 @@ button { font: inherit; color: inherit; }
   }
   .chips--stats .chip, .chips__label { flex-shrink: 0; }
 }
+
+.drawer__actions { position: absolute; top: 18px; right: 18px; display: flex; gap: 6px; }
+.icon-btn.is-done { border-color: var(--up); color: var(--up); }

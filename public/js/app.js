@@ -1,6 +1,7 @@
 import { el, clear, fmt, timeAgo } from './util.js';
-import { state, subscribe, loadLeagues, loadSnapshot } from './store.js';
-import { closeDetail } from './detail.js';
+import { state, subscribe, loadLeagues, loadSnapshot, findBySlug } from './store.js';
+import { hideDetail, showDetail } from './detail.js';
+import { parseHash, viewHash, forgetPushedItem } from './router.js';
 import { renderOverview } from './views/overview.js';
 import { renderUniques } from './views/uniques.js';
 import { renderCurrency } from './views/currency.js';
@@ -23,7 +24,11 @@ const refreshBtn = document.getElementById('refresh');
 const themeBtn = document.getElementById('theme');
 const updateInsight = mountInsight(document.getElementById('insight'));
 
-const currentView = () => (location.hash.replace('#/', '') || 'overview').split('?')[0];
+const currentView = () => parseHash().view;
+
+// What the main area currently holds, so opening an item can leave it untouched.
+let renderedView = null;
+let renderedSnapshot = null;
 
 /* ---------- theme ---------- */
 
@@ -106,20 +111,59 @@ function render() {
     return;
   }
 
-  const view = VIEWS[currentView()] ?? renderOverview;
-  clear(app).append(view());
-  window.scrollTo({ top: 0 });
+  const { view, item } = parseHash();
+
+  // Only rebuild the page when the view or the data actually changed. Opening an
+  // item is a URL change too, and re-rendering there would throw away the
+  // reader's filters and scroll position.
+  if (view !== renderedView || state.snapshot !== renderedSnapshot) {
+    const render = VIEWS[view] ?? renderOverview;
+    clear(app).append(render());
+    renderedView = view;
+    renderedSnapshot = state.snapshot;
+    window.scrollTo({ top: 0 });
+  }
+
+  syncDetail(item);
+}
+
+let shownSlug = null;
+let shownSnapshot = null;
+
+/** Drives the detail panel purely from the URL, including on a cold deep link. */
+function syncDetail(slug) {
+  if (!slug) {
+    shownSlug = null;
+    forgetPushedItem();
+    hideDetail();
+    return;
+  }
+
+  // Every store update re-renders; rebuilding an unchanged panel would restart
+  // its history fetch and throw away the reader's place in it.
+  if (slug === shownSlug && state.snapshot === shownSnapshot) return;
+
+  const entry = findBySlug(slug);
+  if (entry) {
+    shownSlug = slug;
+    shownSnapshot = state.snapshot;
+    showDetail(entry);
+    return;
+  }
+
+  // Unknown item: a stale link, or a league that doesn't carry it. Drop the
+  // parameter rather than leaving a dead URL in the bar.
+  shownSlug = null;
+  hideDetail();
+  history.replaceState(null, '', viewHash(parseHash().view));
 }
 
 subscribe(render);
 
-window.addEventListener('hashchange', () => {
-  closeDetail();
-  render();
-});
+window.addEventListener('hashchange', render);
 
 leagueSelect.addEventListener('change', (e) => {
-  closeDetail();
+  hideDetail();
   loadSnapshot(e.target.value);
 });
 
