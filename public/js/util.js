@@ -128,7 +128,7 @@ export function sparkline(data, change) {
 
 /* ---------- shared fragments ---------- */
 
-export function itemCell(entry, { plain = false } = {}) {
+export function itemCell(entry, { plain = false, note = null } = {}) {
   return el('div', { class: 'item' }, [
     entry.icon &&
       el('img', {
@@ -143,9 +143,38 @@ export function itemCell(entry, { plain = false } = {}) {
     el('div', { class: 'item__text' }, [
       el('div', { class: `item__name${plain ? ' plain' : ''}`, text: entry.name }),
       (entry.baseType || entry.slot || entry.category) &&
-        el('div', { class: 'item__base', text: entry.baseType || entry.slot || entry.category })
+        el('div', { class: 'item__base', text: entry.baseType || entry.slot || entry.category }),
+      note
     ])
   ]);
+}
+
+/**
+ * Text with every occurrence of `query` wrapped in <mark>.
+ *
+ * Built from nodes rather than innerHTML: the query is whatever the user typed,
+ * and item text comes from an upstream feed.
+ */
+export function highlight(text, query) {
+  const frag = document.createDocumentFragment();
+  if (!query) {
+    frag.append(text);
+    return frag;
+  }
+
+  const haystack = text.toLowerCase();
+  const needle = query.toLowerCase();
+  let at = 0;
+
+  for (;;) {
+    const hit = haystack.indexOf(needle, at);
+    if (hit === -1) break;
+    if (hit > at) frag.append(text.slice(at, hit));
+    frag.append(el('mark', { text: text.slice(hit, hit + needle.length) }));
+    at = hit + needle.length;
+  }
+  frag.append(text.slice(at));
+  return frag;
 }
 
 export function section(title, note, body) {

@@ -54,9 +54,12 @@ Cron Trigger or scheduled deploy to rebuild.
 list of the priciest uniques, the sharpest seven-day movers, and which currencies
 actually see volume.
 
-**Uniques** — all ~740 tracked uniques, searchable and sortable by price, listing
-count, level requirement or trend. Clicking a row opens the full item card with
-modifiers, properties and flavour text.
+**Uniques** — all ~740 tracked uniques, sortable by price, listing count, level
+requirement or trend. Search covers **modifier text**, not just names, so "spirit"
+or "movement speed" finds every unique granting it. Rows that matched on a mod show
+which one, with the term highlighted, so a result is never unexplained. Stat chips
+give one-click searches for the most-shopped stats. Clicking a row opens the full
+item card and its price history.
 
 **Currency** — every exchange category poe.ninja tracks: orbs, fragments, runes,
 soul cores, essences, uncut and lineage gems, omens, liquid emotions, catalysts,
