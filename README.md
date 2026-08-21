@@ -1,7 +1,29 @@
 # PoE2 Market
 
-A Path of Exile 2 economy tracker: the most expensive uniques, currency exchange
-rates, and a page of statistics you can't get from a plain price list.
+An economy tracker for **both Path of Exile games**: the most expensive uniques,
+currency exchange rates, and a page of statistics you can't get from a plain price
+list. Switch games from the header.
+
+## Two realms, one shape
+
+The realms are not as similar as they look, and `server/realms.js` is where the
+differences live:
+
+|  | PoE 2 | PoE 1 |
+| --- | --- | --- |
+| Unit of account | Divine Orbs | **Chaos Orbs** |
+| Item response | `primaryValue` + a `core` block | `chaosValue` / `divineValue` per line |
+| Item extras | rune-socketed variants | **socket links** (5L / 6L) |
+| Categories | mechanic names (Ritual, Breach) | item families (Scarab, Fossil, Oil) |
+
+Everything is normalised to Divine Orbs and one field naming, so no view has to
+know which game it is showing. Each realm declares its own `secondaryUnit`, which
+rides along with the exchange rates — that is what makes cheap items quote in
+Exalted on PoE2 and in Chaos on PoE1 without a single call site branching on realm.
+
+PoE1 tracks uniques only. `BaseType` (20k rare bases) and `SkillGem` (7.5k gem
+permutations) are 13 MB between them and are a different kind of thing from what
+this site does.
 
 Data comes from the [poe.ninja PoE2 economy API](https://poe.ninja/docs/api).
 
@@ -15,7 +37,9 @@ to `public/data/*.json`, and publishes the folder to GitHub Pages.
 npm run refresh
 ```
 
-That fetches the economy and writes `public/data/`. Then:
+That fetches both economies and writes `public/data/`. Pass a realm to build just
+one — `node scripts/snapshot.js poe1` — which leaves the other realm's data files
+and its entry in the index untouched. Then:
 
 ```bash
 npm start

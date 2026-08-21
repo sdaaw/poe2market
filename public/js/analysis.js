@@ -23,10 +23,22 @@
  */
 
 /** Item families that drop broadly rather than from one mechanic. */
-const GENERAL_DROPS = new Set(['Runes', 'UncutGems', 'Fragments']);
+const GENERAL_DROPS = new Set([
+  // PoE2
+  'Runes', 'UncutGems', 'Fragments',
+  // PoE1
+  'Fragment', 'DivinationCard'
+]);
 
-/** poe.ninja's key -> what a player calls the content, where the two differ. */
+/**
+ * poe.ninja's key -> what a player calls the content, where the two differ.
+ *
+ * For PoE2 the key usually *is* the mechanic (Ritual, Breach). PoE1 groups by
+ * item family instead (Fossil, Oil, Scarab), so those keep the family name
+ * rather than have a drop source guessed for them.
+ */
 const CONTENT_NAMES = {
+  // PoE2
   Ritual: 'Ritual',
   Breach: 'Breach',
   Delirium: 'Delirium',
@@ -39,7 +51,24 @@ const CONTENT_NAMES = {
   LineageSupportGems: 'Lineage Gems',
   Fragments: 'Fragments',
   Runes: 'Runes',
-  UncutGems: 'Uncut Gems'
+  UncutGems: 'Uncut Gems',
+  // PoE1
+  Fragment: 'Fragments',
+  DivinationCard: 'Divination Cards',
+  Essence: 'Essences',
+  Scarab: 'Scarabs',
+  Fossil: 'Fossils',
+  Resonator: 'Resonators',
+  Oil: 'Oils',
+  DeliriumOrb: 'Delirium Orbs',
+  Artifact: 'Artifacts',
+  Omen: 'Omens',
+  Tattoo: 'Tattoos',
+  AllflameEmber: 'Allflame Embers',
+  Runegraft: 'Runegrafts',
+  Astrolabe: 'Astrolabes',
+  EnshroudingCrystal: 'Enshrouding Crystals',
+  Ducat: 'Ducats'
 };
 
 /** Worth bending down to pick up: roughly 18 Exalted at current rates. */

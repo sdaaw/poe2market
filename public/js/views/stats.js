@@ -14,6 +14,10 @@ const median = (nums) => {
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 };
 
+/** The realm's small-change unit: Exalted in PoE2, Chaos in PoE1. */
+const smallUnit = (r) =>
+  r.secondary === 'chaos' ? { per: r.chaos, label: 'chaos' } : { per: r.exalted, label: 'ex' };
+
 const normaliseSlot = (slot) => {
   if (!slot) return 'Other';
   const words = slot.split(' ');
@@ -27,11 +31,13 @@ export function renderStats() {
   const traded = liquid(all, 3);
   const page = el('div');
 
+  const unit = smallUnit(r);
   const med = median(traded.map((i) => i.divine));
   const aboveDivine = all.filter((i) => i.divine >= 1);
   const mirror = findCurrency('Mirror of Kalandra');
-  const runePairs = findRunePairs(all);
-  const runePremium = median(runePairs.map((p) => p.premium));
+  // PoE2 sells rune-socketed variants; PoE1 sells link counts. Same question.
+  const variants = findVariantPairs(all);
+  const variantPremium = median(variants.pairs.map((p) => p.premium));
   const mostListed = [...all].sort((a, b) => b.listings - a.listings)[0];
 
   page.append(
@@ -46,19 +52,27 @@ export function renderStats() {
   /* ---- headline oddities ---- */
   page.append(
     el('div', { class: 'grid grid--4', style: 'margin-bottom:44px' }, [
-      statTile('Median unique', fmt(med * r.exalted), 'ex', 'half of all uniques cost less'),
+      statTile('Median unique', fmt(med * unit.per), unit.label, 'half of all uniques cost less'),
       statTile(
         'Worth a Divine or more',
         String(aboveDivine.length),
         `/ ${all.length}`,
         `${((aboveDivine.length / Math.max(all.length, 1)) * 100).toFixed(1)}% of the unique pool`
       ),
-      statTile(
-        'Rune-socketed premium',
-        runePremium > 0 ? `+${(runePremium * 100).toFixed(0)}` : '—',
-        '%',
-        `median uplift across ${runePairs.length} matched pairs`
-      ),
+      // Only meaningful where the realm actually has matched variants to compare.
+      variants.pairs.length
+        ? statTile(
+            variants.label,
+            `+${(variantPremium * 100).toFixed(0)}`,
+            '%',
+            `median uplift across ${variants.pairs.length} matched pairs`
+          )
+        : statTile(
+            'Priced below a Chaos',
+            String(all.filter((i) => i.divine * r.chaos < 1).length),
+            'uniques',
+            'the bottom of the market'
+          ),
       statTile(
         'Most listed unique',
         listingLabel(mostListed?.listings ?? 0),
@@ -74,8 +88,8 @@ export function renderStats() {
     { label: '100 – 1,000 div', test: (i) => i.divine >= 100 && i.divine < 1000 },
     { label: '10 – 100 div', test: (i) => i.divine >= 10 && i.divine < 100 },
     { label: '1 – 10 div', test: (i) => i.divine >= 1 && i.divine < 10 },
-    { label: '1 ex – 1 div', test: (i) => i.divine * r.exalted >= 1 && i.divine < 1 },
-    { label: 'under 1 ex', test: (i) => i.divine * r.exalted < 1 }
+    { label: `1 ${unit.label} – 1 div`, test: (i) => i.divine * unit.per >= 1 && i.divine < 1 },
+    { label: `under 1 ${unit.label}`, test: (i) => i.divine * unit.per < 1 }
   ].map((b) => {
     const n = all.filter(b.test).length;
     return { label: b.label, value: n, display: `${n} · ${((n / all.length) * 100).toFixed(1)}%` };
@@ -91,7 +105,9 @@ export function renderStats() {
 
   /* ---- a mirror buys you ---- */
   if (mirror) {
-    const cheapest = [...liquid(all, 10)].sort((a, b) => a.divine - b.divine)[0];
+    // PoE1 lists hundreds of uniques at a divine value of zero; dividing by one
+    // of those yields Infinity rather than a fun number.
+    const cheapest = liquid(all, 10).filter((i) => i.divine > 0).sort((a, b) => a.divine - b.divine)[0];
     const conversions = [
       { label: 'Divine Orbs', value: mirror.divine },
       { label: 'Exalted Orbs', value: mirror.divine * r.exalted },
@@ -207,8 +223,8 @@ export function renderStats() {
   ]
     .map((b) => {
       const pool = traded.filter((i) => i.level >= b.min && i.level <= b.max);
-      const m = median(pool.map((i) => i.divine)) * r.exalted;
-      return { label: b.label, value: m, display: pool.length ? `${fmt(m)} ex · ${pool.length} items` : 'no data' };
+      const m = median(pool.map((i) => i.divine)) * unit.per;
+      return { label: b.label, value: m, display: pool.length ? `${fmt(m)} ${unit.label} · ${pool.length} items` : 'no data' };
     })
     .filter((b) => b.value > 0);
 
@@ -221,11 +237,11 @@ export function renderStats() {
   );
 
   /* ---- rune premium detail ---- */
-  if (runePairs.length) {
-    const topPairs = [...runePairs].sort((a, b) => b.premium - a.premium).slice(0, 8);
+  if (variants.pairs.length) {
+    const topPairs = [...variants.pairs].sort((a, b) => b.premium - a.premium).slice(0, 8);
     page.append(
       section(
-        'What a rune is worth',
+        variants.sectionTitle,
         'Rune-socketed variants against the plain version of the same unique',
         el('div', { class: 'card' }, [
           el(
@@ -293,24 +309,56 @@ function listCard(title, note, rows, r, subline) {
  * 1-Exalted price floor, and dividing a 300 div runed version by that floor
  * produces a meaningless five-digit "premium".
  */
-const PRICE_FLOOR = 0.05; // ≈ 18 ex — below this the average is just the floor
+const PRICE_FLOOR = 0.05; // below this the average is just the price floor
 
-function findRunePairs(all) {
-  const plain = new Map();
-  const runed = [];
+/** Both halves of a comparison have to be real markets for the ratio to mean anything. */
+const comparable = (a, b) =>
+  a.divine >= PRICE_FLOOR && b.divine >= PRICE_FLOOR && a.listings >= 5 && b.listings >= 5;
 
+/**
+ * "What does the upgraded version cost over the plain one?" — the same question
+ * in both games, asked of whatever that game upgrades.
+ *
+ * PoE2 sells rune-socketed variants of a unique alongside the plain one. PoE1
+ * sells the same unique at different link counts. Either way the plain half has
+ * to be worth something first: hundreds of uniques sit at the price floor, and
+ * dividing an expensive variant by that floor invents a five-digit "premium".
+ */
+function findVariantPairs(all) {
+  const runed = all.filter((it) => RUNE_PREFIX.test(it.baseType));
+  if (runed.length) {
+    const plain = new Map();
+    for (const it of all) if (!RUNE_PREFIX.test(it.baseType)) plain.set(`${it.name}|${it.baseType}`, it);
+
+    const pairs = [];
+    for (const it of runed) {
+      const base = plain.get(`${it.name}|${it.baseType.replace(RUNE_PREFIX, '')}`);
+      if (!base || !comparable(it, base)) continue;
+      const premium = it.divine / base.divine - 1;
+      if (premium > 0) pairs.push({ runed: it, plain: base, premium });
+    }
+    return { pairs, label: 'Rune-socketed premium', sectionTitle: 'What a rune is worth' };
+  }
+
+  // PoE1: compare a unique's six-link against the same unique unlinked. The feed
+  // can list several entries per link count at wildly different prices, so take
+  // the best-supplied one of each rather than whichever happens to come first.
+  const groups = new Map();
   for (const it of all) {
-    if (RUNE_PREFIX.test(it.baseType)) runed.push(it);
-    else plain.set(`${it.name}|${it.baseType}`, it);
+    const key = `${it.name}|${it.baseType}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(it);
   }
 
   const pairs = [];
-  for (const it of runed) {
-    const base = plain.get(`${it.name}|${it.baseType.replace(RUNE_PREFIX, '')}`);
-    if (!base || base.divine < PRICE_FLOOR || it.divine < PRICE_FLOOR) continue;
-    if (base.listings < 5 || it.listings < 5) continue;
-    const premium = it.divine / base.divine - 1;
-    if (premium > 0) pairs.push({ runed: it, plain: base, premium });
+  for (const group of groups.values()) {
+    const best = (test) =>
+      group.filter(test).sort((a, b) => b.listings - a.listings)[0];
+    const linked = best((i) => i.links === 6);
+    const bare = best((i) => !i.links);
+    if (!linked || !bare || !comparable(linked, bare)) continue;
+    const premium = linked.divine / bare.divine - 1;
+    if (premium > 0) pairs.push({ runed: linked, plain: bare, premium });
   }
-  return pairs;
+  return { pairs, label: 'Six-link premium', sectionTitle: 'What a six-link is worth' };
 }

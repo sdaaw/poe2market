@@ -385,10 +385,12 @@ button { font: inherit; color: inherit; }
 
   /* The league name is long; let the picker shrink instead of pushing the
      buttons off-screen, and drop sparklines from the compact list rows. */
-  .topbar__inner { gap: 10px; }
-  .topbar__actions { min-width: 0; }
-  .select { min-width: 0; }
-  .select select { max-width: 120px; text-overflow: ellipsis; }
+  /* Brand on one row, controls on the next: once the realm switch joined them,
+     the league picker and buttons no longer fit a 375px screen side by side. */
+  .topbar__inner { gap: 10px; flex-wrap: wrap; row-gap: 10px; }
+  .topbar__actions { min-width: 0; width: 100%; justify-content: flex-start; }
+  .select { min-width: 0; flex: 1; }
+  .select select { width: 100%; max-width: 170px; text-overflow: ellipsis; }
   .card, .rows, .row, .row__main { min-width: 0; }
   .row .spark { display: none; }
   .controls .search { max-width: none; }
@@ -573,3 +575,20 @@ button { font: inherit; color: inherit; }
 
 .drawer__actions { position: absolute; top: 18px; right: 18px; display: flex; gap: 6px; }
 .icon-btn.is-done { border-color: var(--up); color: var(--up); }
+
+/* ---------- realm switcher ---------- */
+
+.realm {
+  display: flex; gap: 2px; padding: 2px;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 8px; flex-shrink: 0;
+}
+.realm button {
+  padding: 4px 9px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--muted);
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  transition: background .15s, color .15s; white-space: nowrap;
+}
+.realm button:hover { color: var(--text); }
+.realm button.is-on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+[data-theme="light"] .realm button.is-on { box-shadow: 0 1px 2px rgba(0,0,0,.08); }

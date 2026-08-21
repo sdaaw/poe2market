@@ -53,9 +53,12 @@ export function compact(n) {
  * Exalted equivalent runs into the hundreds of thousands, so we drop it.
  */
 export function price(divine, rates) {
-  const ex = divine * (rates?.exalted ?? 0);
-  if (divine >= 1) return { value: fmt(divine), unit: 'div', alt: divine < 10 ? `${fmt(ex)} ex` : null };
-  return { value: fmt(ex), unit: 'ex', alt: null };
+  const unit = rates?.secondary ?? 'ex';
+  const small = divine * ((unit === 'chaos' ? rates?.chaos : rates?.exalted) ?? 0);
+  if (divine >= 1) {
+    return { value: fmt(divine), unit: 'div', alt: divine < 10 ? `${fmt(small)} ${unit}` : null };
+  }
+  return { value: fmt(small), unit, alt: null };
 }
 
 export function priceCell(divine, rates) {

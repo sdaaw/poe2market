@@ -1,16 +1,18 @@
 /**
- * Build step: pull the economy once and write it to public/data as static JSON.
+ * Build step: pull both economies once and write them to public/data as static JSON.
  *
  * The data is public, read-only and identical for every visitor, so there is no
  * reason to hit poe.ninja per request. CI runs this on a schedule and publishes
  * the result, which means one upstream fetch per run rather than one per viewer.
  *
- *   node scripts/snapshot.js
+ *   node scripts/snapshot.js            both realms
+ *   node scripts/snapshot.js poe1       just one
  */
-import { mkdir, writeFile, readdir, unlink } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, readdir, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fetchIndexedLeagues, fetchSnapshot } from '../server/ninja.js';
+import { REALMS } from '../server/realms.js';
 import { updateHistory } from './history.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -27,54 +29,97 @@ const slug = (name) =>
 
 const write = (file, data) => writeFile(path.join(OUT, file), JSON.stringify(data), 'utf8');
 
-async function main() {
-  await mkdir(OUT, { recursive: true });
+const kb = (value) => `${Math.round(JSON.stringify(value).length / 1024)} KB`;
 
-  const leagues = await fetchIndexedLeagues();
-  console.log(`Indexed leagues: ${leagues.map((l) => l.name).join(', ') || '(none)'}`);
+async function buildRealm(realmId) {
+  const cfg = REALMS[realmId];
+  const leagues = await fetchIndexedLeagues(realmId);
+  console.log(`\n${cfg.game}`);
+  console.log(`  leagues: ${leagues.map((l) => l.name).join(', ') || '(none)'}`);
 
   const written = [];
   for (const league of leagues) {
     process.stdout.write(`  ${league.name} … `);
-    const snapshot = await fetchSnapshot(league.id);
+    const snapshot = await fetchSnapshot(realmId, league.id);
 
     if (!snapshot.items.length && !snapshot.currency.length) {
       console.log('no data, skipped');
       continue;
     }
 
-    const id = slug(league.id);
+    const id = `${realmId}-${slug(league.id)}`;
     const file = `${id}.json`;
     await write(file, snapshot);
 
     const hist = await updateHistory(snapshot, HISTORY, id);
-    written.push({ id: league.id, name: league.name, file, history: hist.file });
+    written.push({
+      realm: realmId,
+      realmLabel: cfg.label,
+      game: cfg.game,
+      id: league.id,
+      name: league.name,
+      file,
+      history: hist.file
+    });
 
     console.log(
-      `${snapshot.items.length} uniques, ${snapshot.currency.length} currency -> data/${file}` +
-        (snapshot.errors.length ? ` (${snapshot.errors.length} category errors)` : '')
+      `${snapshot.items.length} items, ${snapshot.currency.length} currency, ${kb(snapshot)} -> data/${file}`
     );
     console.log(
       `      history: ${hist.days} day(s) since ${hist.since}, ${hist.series} series` +
-        (hist.isNewDay ? ' (new day started)' : ' (today updated)')
+        (hist.isNewDay ? ' (new day)' : ' (today updated)')
     );
     for (const err of snapshot.errors) console.warn(`      ! ${err}`);
   }
+  return written;
+}
+
+async function main() {
+  await mkdir(OUT, { recursive: true });
+
+  const only = process.argv[2];
+  const realmIds = only ? [only] : Object.keys(REALMS);
+  if (only && !REALMS[only]) throw new Error(`Unknown realm "${only}". Try: ${Object.keys(REALMS).join(', ')}`);
+
+  const written = [];
+  for (const realmId of realmIds) written.push(...(await buildRealm(realmId)));
 
   if (!written.length) throw new Error('No league returned any data — refusing to publish an empty site.');
 
-  await write('leagues.json', { generatedAt: new Date().toISOString(), leagues: written });
-
-  // Drop snapshots for leagues that are no longer indexed.
-  const keep = new Set([...written.map((w) => w.file), 'leagues.json']);
-  for (const file of await readdir(OUT)) {
-    if (file.endsWith('.json') && !keep.has(file)) {
-      await unlink(path.join(OUT, file));
-      console.log(`  removed stale data/${file}`);
+  // A single-realm run must not evict the other realm from the index, or the
+  // site would lose a game it still has perfectly good data files for.
+  let carried = [];
+  if (only) {
+    try {
+      const existing = JSON.parse(await readFile(path.join(OUT, 'leagues.json'), 'utf8'));
+      carried = (existing.leagues ?? []).filter((l) => l.realm !== only);
+    } catch {
+      // No previous index; nothing to carry.
     }
   }
 
-  console.log(`\nDone — ${written.length} league(s) written to public/data.`);
+  const leagues = [...written, ...carried];
+  const present = new Set(leagues.map((l) => l.realm));
+
+  await write('leagues.json', {
+    generatedAt: new Date().toISOString(),
+    realms: Object.values(REALMS)
+      .filter((r) => present.has(r.id))
+      .map((r) => ({ id: r.id, label: r.label, game: r.game })),
+    leagues
+  });
+
+  // Drop snapshots for leagues that are no longer indexed. Only prunes realms we
+  // actually rebuilt, so a single-realm run cannot delete the other's data.
+  const keep = new Set([...written.map((w) => w.file), 'leagues.json']);
+  for (const file of await readdir(OUT)) {
+    if (!file.endsWith('.json') || keep.has(file)) continue;
+    if (only && !file.startsWith(`${only}-`)) continue;
+    await unlink(path.join(OUT, file));
+    console.log(`  removed stale data/${file}`);
+  }
+
+  console.log(`\nDone — ${written.length} league(s) across ${realmIds.length} realm(s).`);
 }
 
 main().catch((err) => {

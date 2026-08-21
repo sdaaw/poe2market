@@ -1,5 +1,5 @@
 import { el, clear, fmt, timeAgo } from './util.js';
-import { state, subscribe, loadLeagues, loadSnapshot, findBySlug } from './store.js';
+import { state, subscribe, loadLeagues, loadSnapshot, findBySlug, leaguesFor } from './store.js';
 import { hideDetail, showDetail } from './detail.js';
 import { parseHash, viewHash, forgetPushedItem } from './router.js';
 import { renderOverview } from './views/overview.js';
@@ -22,6 +22,7 @@ const stamp = document.getElementById('stamp');
 const leagueSelect = document.getElementById('league');
 const refreshBtn = document.getElementById('refresh');
 const themeBtn = document.getElementById('theme');
+const realmEl = document.getElementById('realm');
 const updateInsight = mountInsight(document.getElementById('insight'));
 
 const currentView = () => parseHash().view;
@@ -47,9 +48,32 @@ function paintChrome() {
   const view = currentView();
   for (const a of tabs.children) a.classList.toggle('is-active', a.dataset.view === view);
 
-  if (leagueSelect.value !== state.league || leagueSelect.options.length !== state.leagues.length) {
+  // Realm switch, hidden entirely when only one game has data.
+  realmEl.hidden = state.realms.length < 2;
+  if (!realmEl.hidden && realmEl.dataset.realm !== state.realm) {
+    realmEl.dataset.realm = state.realm;
+    clear(realmEl).append(
+      ...state.realms.map((r) =>
+        el('button', {
+          type: 'button',
+          class: r.id === state.realm ? 'is-on' : '',
+          text: r.label,
+          title: r.game,
+          'aria-pressed': String(r.id === state.realm),
+          onclick: () => {
+            if (r.id === state.realm) return;
+            hideDetail();
+            loadSnapshot(null, r.id);
+          }
+        })
+      )
+    );
+  }
+
+  const leagues = leaguesFor(state.realm);
+  if (leagueSelect.value !== state.league || leagueSelect.options.length !== leagues.length) {
     clear(leagueSelect).append(
-      ...state.leagues.map((l) => el('option', { value: l.id, text: l.name, selected: l.id === state.league }))
+      ...leagues.map((l) => el('option', { value: l.id, text: l.name, selected: l.id === state.league }))
     );
   }
 

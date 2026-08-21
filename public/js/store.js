@@ -9,13 +9,18 @@
 const listeners = new Set();
 
 export const state = {
+  realm: localStorage.getItem('poe2.realm') || 'poe2',
   league: localStorage.getItem('poe2.league') || null,
+  realms: [],
   leagues: [],
   generatedAt: null,
   snapshot: null,
   loading: false,
   error: null
 };
+
+/** Both games have a "Standard" and a "Hardcore", so a league is only unique per realm. */
+const sameLeague = (entry, realm, league) => entry.realm === realm && entry.id === league;
 
 export function subscribe(fn) {
   listeners.add(fn);
@@ -36,29 +41,43 @@ export async function loadLeagues() {
   try {
     const index = await getJson('data/leagues.json', { fresh: true });
     state.leagues = index.leagues ?? [];
+    state.realms = index.realms ?? [];
     state.generatedAt = index.generatedAt ?? null;
 
-    if (!state.leagues.some((l) => l.id === state.league)) {
-      state.league = state.leagues[0]?.id ?? null;
+    // Keep only realms that actually produced data this build.
+    const built = new Set(state.leagues.map((l) => l.realm));
+    state.realms = state.realms.filter((r) => built.has(r.id));
+    if (!built.has(state.realm)) state.realm = state.realms[0]?.id ?? state.realm;
+
+    if (!state.leagues.some((l) => sameLeague(l, state.realm, state.league))) {
+      state.league = leaguesFor(state.realm)[0]?.id ?? null;
     }
   } catch (err) {
     state.leagues = [];
+    state.realms = [];
     state.error = `${err.message}. Run "npm run refresh" to build the data files.`;
   }
   emit();
 }
 
-export async function loadSnapshot(league = state.league) {
-  const entry = state.leagues.find((l) => l.id === league) ?? state.leagues[0];
+/** Leagues belonging to one game. */
+export const leaguesFor = (realm = state.realm) => state.leagues.filter((l) => l.realm === realm);
+
+export async function loadSnapshot(league = state.league, realm = state.realm) {
+  const entry =
+    state.leagues.find((l) => sameLeague(l, realm, league)) ?? leaguesFor(realm)[0];
+
   if (!entry) {
     state.error = state.error ?? 'No league data has been built yet.';
     emit();
     return;
   }
 
+  state.realm = entry.realm;
   state.league = entry.id;
   state.loading = true;
   state.error = null;
+  localStorage.setItem('poe2.realm', entry.realm);
   localStorage.setItem('poe2.league', entry.id);
   emit();
 
@@ -75,7 +94,16 @@ export async function loadSnapshot(league = state.league) {
 
 /* ---------- derived selectors ---------- */
 
-export const rates = () => state.snapshot?.rates ?? { exalted: 0, chaos: 0 };
+/**
+ * Rates carry the realm's small-change unit alongside the numbers, so every
+ * price formatter picks the right one without needing to know the realm:
+ * PoE2 quotes cheap items in Exalted, PoE1 in Chaos.
+ */
+export const rates = () => ({
+  exalted: state.snapshot?.rates?.exalted ?? 0,
+  chaos: state.snapshot?.rates?.chaos ?? 0,
+  secondary: state.snapshot?.secondaryUnit ?? 'ex'
+});
 export const items = () => state.snapshot?.items ?? [];
 export const currency = () => state.snapshot?.currency ?? [];
 
