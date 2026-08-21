@@ -128,7 +128,7 @@ function cleanTags(text) {
   return text.replace(/\[([^\]|]+)\|([^\]]+)\]/g, '$2').replace(/\[([^\]]+)\]/g, '$1').trim();
 }
 
-function normaliseExchange(payload, category) {
+function normaliseExchange(payload, category, mechanic) {
   const meta = new Map((payload.items ?? []).map((i) => [i.id, i]));
   return payload.lines.map((line) => {
     const info = meta.get(line.id) ?? {};
@@ -137,6 +137,9 @@ function normaliseExchange(payload, category) {
       key: `${category}:${line.id}`,
       name: info.name ?? line.id,
       category,
+      // poe.ninja's own grouping key — for most of these it *is* the league
+      // mechanic that drops the item, which is what the content analysis leans on.
+      mechanic,
       icon: icon(info.image),
       divine: line.primaryValue ?? 0,
       // How many of this item trade per unit of the deepest-liquidity currency.
@@ -177,7 +180,7 @@ export async function fetchSnapshot(league) {
         `${BASE}/api/economy/exchange/current/overview?league=${q}&type=${type}`
       );
       if (data.core?.rates) rates = data.core.rates;
-      return normaliseExchange(data, label);
+      return normaliseExchange(data, label, type);
     } catch (err) {
       errors.push(`${type}: ${err.message}`);
       return [];

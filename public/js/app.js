@@ -5,6 +5,7 @@ import { renderOverview } from './views/overview.js';
 import { renderUniques } from './views/uniques.js';
 import { renderCurrency } from './views/currency.js';
 import { renderStats } from './views/stats.js';
+import { mountInsight } from './insight.js';
 
 const VIEWS = {
   overview: renderOverview,
@@ -20,6 +21,7 @@ const stamp = document.getElementById('stamp');
 const leagueSelect = document.getElementById('league');
 const refreshBtn = document.getElementById('refresh');
 const themeBtn = document.getElementById('theme');
+const updateInsight = mountInsight(document.getElementById('insight'));
 
 const currentView = () => (location.hash.replace('#/', '') || 'overview').split('?')[0];
 
@@ -56,6 +58,8 @@ function paintChrome() {
   }
 
   refreshBtn.classList.toggle('is-busy', state.loading);
+
+  if (state.snapshot) updateInsight();
 
   const built = state.snapshot?.updatedAt;
   stamp.textContent = built ? `data ${timeAgo(built)}` : '';

@@ -91,6 +91,39 @@ directly. All asset paths are relative so the site works from a project subpath
 
 The snapshot is ~1 MB of JSON, about 213 KB gzipped, fetched once per visit.
 
+## The "what should I farm" chip
+
+The header carries a small chip naming the mechanic with the strongest market,
+with the full ranking behind it. It deliberately does **not** reason from headline
+item prices — "Temporalis is worth 3,800 div, so farm wherever it drops" describes
+a lottery ceiling, not an income.
+
+Instead each mechanic is scored on four things, ranked against the other mechanics
+rather than absolute thresholds (what counts as "deep" depends on the league and
+how old it is):
+
+| Component | Weight | Question it answers |
+| --- | --- | --- |
+| Depth | 35% | Can the market absorb what you farm, or does it collapse when you list a stack? |
+| Breadth | 25% | How many distinct drops clear a worthwhile price? |
+| Consistency | 25% | Is the value spread, or does one item carry the whole category? |
+| Momentum | 15% | Volume-weighted 7-day movement, clamped so a spike can't buy the top spot. |
+
+Consistency is what stops the obvious mistake. Idols currently post some of the
+strongest momentum of any mechanic and still rank near the bottom, because 96% of
+their turnover sits on a single item — a lottery wearing a mechanic's clothes.
+
+**Its limits, stated plainly:** it measures demand, not yield. No public economy
+API exposes drop rates or clear times, so it cannot produce a divine-per-hour
+figure and does not try. Read it as "where the money is and whether you can
+realise it", then weigh that against your own clear speed. The grouping comes from
+poe.ninja's own category keys, so "Ritual" means the Omens it files under Ritual.
+A few categories (Runes, Uncut Gems, Fragments) drop broadly rather than from one
+mechanic and are tagged `general`.
+
+The logic lives in `public/js/analysis.js`, kept DOM-free so it can be run and
+checked straight from Node.
+
 ## Notes on the data
 
 - **Prices are in Divine Orbs.** That is poe.ninja's primary unit; the UI converts
