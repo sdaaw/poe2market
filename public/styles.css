@@ -130,7 +130,7 @@ button { font: inherit; color: inherit; }
 }
 .tabs a {
   padding: 9px 14px 12px; font-size: 13.5px; color: var(--muted);
-  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
   transition: color .15s;
 }
 .tabs a:hover { color: var(--text); }
@@ -376,12 +376,11 @@ button { font: inherit; color: inherit; }
 
 @media (max-width: 720px) {
   .app { padding: 24px 16px 48px; }
-  .topbar__inner, .tabs, .footer { padding-left: 16px; padding-right: 16px; }
+  .topbar__inner, .footer { padding-left: 16px; padding-right: 16px; }
   .grid--4 { grid-template-columns: 1fr; }
   .podium { grid-template-columns: 1fr; }
   .hide-sm { display: none; }
   .page-head h1 { font-size: 20px; }
-  .tabs { overflow-x: auto; }
 
   /* The league name is long; let the picker shrink instead of pushing the
      buttons off-screen, and drop sparklines from the compact list rows. */
@@ -400,7 +399,15 @@ button { font: inherit; color: inherit; }
   max-width: 1220px; margin: 0 auto; padding: 0 24px;
   display: flex; align-items: center; gap: 16px;
 }
-.subbar .tabs { flex: 1; min-width: 0; overflow-x: auto; padding: 0; margin: 0; }
+/* overflow-x:auto forces overflow-y to compute to auto, so anything taller than
+   the container raises a stray vertical scrollbar. The active tab's underline
+   overlaps the header border via a negative margin on this container rather than
+   on the links, which would push them past its edge and do exactly that. */
+.subbar .tabs {
+  flex: 1; min-width: 0; padding: 0;
+  overflow-x: auto; overflow-y: hidden;
+  margin: 0 0 -1px;
+}
 
 .insight { position: relative; flex-shrink: 0; padding-bottom: 6px; }
 
