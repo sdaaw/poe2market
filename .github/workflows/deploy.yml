@@ -16,7 +16,9 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  # write, because each run commits the day's prices back into public/history —
+  # the repository is the only thing that persists between runs.
+  contents: write
   pages: write
   id-token: write
 
@@ -37,6 +39,29 @@ jobs:
       # No dependencies to install — the build and the site are both plain Node/ESM.
       - name: Fetch the economy
         run: node scripts/snapshot.js
+
+      # "[skip ci]" matters: without it this push would retrigger the workflow's
+      # own push trigger and the job would run itself forever.
+      - name: Record price history
+        run: |
+          if [ -z "$(git status --porcelain public/history)" ]; then
+            echo "History unchanged — nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/history
+          git commit -m "Record economy snapshot for $(date -u +%Y-%m-%d) [skip ci]"
+          for attempt in 1 2 3; do
+            if git pull --rebase --autostash origin main && git push origin HEAD:main; then
+              echo "History pushed."
+              exit 0
+            fi
+            echo "Push attempt $attempt failed (likely a concurrent run) — retrying."
+            sleep 5
+          done
+          # A lost history commit is recoverable next run; a blocked deploy is not.
+          echo "::warning::Could not push history after 3 attempts. Deploying anyway."
 
       - uses: actions/configure-pages@v5
 

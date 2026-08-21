@@ -11,8 +11,13 @@ import { mkdir, writeFile, readdir, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fetchIndexedLeagues, fetchSnapshot } from '../server/ninja.js';
+import { updateHistory } from './history.js';
 
-const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public', 'data');
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const OUT = path.join(ROOT, 'public', 'data');
+// Unlike public/data, this is committed: it is the only thing that survives
+// between CI runs, and therefore the only place long-run history can live.
+const HISTORY = path.join(ROOT, 'public', 'history');
 
 const slug = (name) =>
   name
@@ -38,12 +43,20 @@ async function main() {
       continue;
     }
 
-    const file = `${slug(league.id)}.json`;
+    const id = slug(league.id);
+    const file = `${id}.json`;
     await write(file, snapshot);
-    written.push({ id: league.id, name: league.name, file });
+
+    const hist = await updateHistory(snapshot, HISTORY, id);
+    written.push({ id: league.id, name: league.name, file, history: hist.file });
+
     console.log(
       `${snapshot.items.length} uniques, ${snapshot.currency.length} currency -> data/${file}` +
         (snapshot.errors.length ? ` (${snapshot.errors.length} category errors)` : '')
+    );
+    console.log(
+      `      history: ${hist.days} day(s) since ${hist.since}, ${hist.series} series` +
+        (hist.isNewDay ? ' (new day started)' : ' (today updated)')
     );
     for (const err of snapshot.errors) console.warn(`      ! ${err}`);
   }

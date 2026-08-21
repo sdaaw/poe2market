@@ -124,6 +124,35 @@ mechanic and are tagged `general`.
 The logic lives in `public/js/analysis.js`, kept DOM-free so it can be run and
 checked straight from Node.
 
+## Price history
+
+poe.ninja gives seven sparkline points and nothing older, so the site keeps its
+own record. Every scheduled build appends the day's prices to
+`public/history/<league>.json` and CI commits the file back — **the repository is
+the store.** There is no database, and there deliberately isn't a per-visitor one:
+history in `localStorage` would mean every new reader arrives to an empty chart.
+
+- One point per item per UTC day. Runs during the day overwrite that day's entry,
+  so each value settles as a daily close.
+- Series are arrays positionally aligned to a shared `dates` array, which is far
+  cheaper than repeating a timestamp per point. Days with no reading stay `null`
+  and are drawn as gaps, never bridged with an invented line.
+- Growth is roughly 8 KB/day raw (~2 KB gzipped) for ~1,400 series, capped at
+  `MAX_DAYS = 180` in `scripts/history.js`.
+- The file is fetched lazily — only when something actually draws a chart — so
+  opening the site costs nothing extra.
+- Per-mechanic turnover and concentration are recorded alongside, so the content
+  analysis can grow trend lines as data accumulates.
+
+**It starts empty.** Nothing is back-filled: the 7-day sparkline can't be turned
+back into absolute prices without inventing numbers. Charts appear once an item
+has three days recorded; before that the panel says how much has been collected.
+
+The commit step marks its commits `[skip ci]`. Without that, pushing history would
+retrigger the workflow's own `push` trigger and the job would run itself forever.
+A useful side effect of committing every 30 minutes: the repo never goes 60 days
+without activity, so scheduled workflows don't get disabled.
+
 ## Notes on the data
 
 - **Prices are in Divine Orbs.** That is poe.ninja's primary unit; the UI converts

@@ -1,5 +1,7 @@
 import { el, clear, fmt, compact, listingLabel, deltaEl, sparkline } from './util.js';
 import { rates } from './store.js';
+import { loadHistory, seriesFor, daysRecorded } from './history.js';
+import { priceChart, chartSummary } from './chart.js';
 
 const drawer = document.getElementById('drawer');
 const body = document.getElementById('drawer-body');
@@ -29,6 +31,8 @@ export function openDetail(entry) {
   const ex = entry.divine * r.exalted;
   const chaos = entry.divine * r.chaos;
 
+  const slot = el('div', { class: 'history' });
+
   // Node.append() turns a null into the literal text "null", so filter first.
   const blocks = [
     el('div', { class: 'detail__head' }, [
@@ -53,6 +57,8 @@ export function openDetail(entry) {
         el('div', { class: 'detail__price-value', text: chaos >= 10000 ? compact(chaos) : fmt(chaos) })
       ])
     ]),
+
+    slot,
 
     el('div', { class: 'row' }, [
       el('div', { class: 'row__main' }, [
@@ -90,4 +96,54 @@ export function openDetail(entry) {
 
   clear(body).append(...blocks.filter(Boolean));
   drawer.hidden = false;
+
+  // History is a separate download, so the panel opens immediately and the chart
+  // fills in behind it.
+  renderHistory(slot, entry);
+}
+
+/**
+ * Fills the history slot once the (lazily fetched) history file arrives.
+ *
+ * Early in a league there is barely anything recorded, so rather than draw a
+ * misleading two-point line we say plainly how much has been collected so far.
+ */
+let historyToken = 0;
+
+async function renderHistory(slot, entry) {
+  const token = ++historyToken;
+  const history = await loadHistory();
+  if (token !== historyToken) return; // a different item was opened meanwhile
+
+  if (!history) return;
+
+  const series = seriesFor(history, entry.key);
+  if (!series) {
+    const days = daysRecorded(history);
+    clear(slot).append(
+      el('div', { class: 'history__pending' }, [
+        el('span', { text: days <= 1 ? 'Price history starts building today.' : `Collecting price history — ${days} days so far.` })
+      ])
+    );
+    return;
+  }
+
+  const s = chartSummary(series);
+  const dir = s.change > 0.5 ? 'up' : s.change < -0.5 ? 'down' : 'flat';
+
+  clear(slot).append(
+    el('div', { class: 'history__head' }, [
+      el('span', { class: 'history__title', text: `Since ${s.from}` }),
+      el('span', {
+        class: `delta ${dir}`,
+        text: dir === 'flat' ? '—' : `${s.change > 0 ? '+' : ''}${s.change.toFixed(1)}%`
+      })
+    ]),
+    priceChart(series),
+    el('div', { class: 'history__foot' }, [
+      el('span', { text: `low ${s.low}` }),
+      el('span', { text: `${s.days} days` }),
+      el('span', { text: `high ${s.high}` })
+    ])
+  );
 }

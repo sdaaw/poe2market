@@ -508,3 +508,31 @@ button { font: inherit; color: inherit; }
   .insight__chip { padding: 5px 8px; }
   .insight__label { display: none; }
 }
+
+/* ---------- price history chart ---------- */
+
+.history:empty { display: none; }
+
+.history {
+  margin: 0 0 18px;
+  padding: 12px 14px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+}
+
+.history__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.history__title {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint);
+}
+
+.chart { display: block; width: 100%; height: 96px; margin: 6px 0 2px; overflow: visible; }
+
+.history__foot {
+  display: flex; justify-content: space-between; gap: 10px;
+  font-family: var(--mono); font-size: 10.5px; color: var(--faint);
+}
+
+.history__pending {
+  font-size: 12px; color: var(--faint); line-height: 1.5; text-align: center; padding: 4px 0;
+}
