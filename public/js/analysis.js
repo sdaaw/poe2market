@@ -151,22 +151,27 @@ export const PROFILE_NOTES = {
   steady: 'value spread across a handful of drops'
 };
 
+const REASONS = {
+  depth: 'a market deep enough to sell into',
+  breadth: 'plenty of drops worth listing',
+  consistency: "demand that isn't stuck on one item",
+  momentum: 'prices trending up'
+};
+
 /**
- * One honest sentence explaining a ranking. Deliberately quotes the numbers
- * rather than superlatives — several mechanics sit in the top quartile at once,
- * so "the deepest market" would be true of more than one of them.
+ * Why the leader leads, in one line.
+ *
+ * Deliberately interpretive rather than numeric: every figure behind the ranking
+ * is already shown in the row itself, so restating them here just doubles the
+ * reading for no extra information.
  */
 export function explain(row) {
-  const turnover =
-    row.turnover >= 1000 ? `${(row.turnover / 1000).toFixed(1)}k` : Math.round(row.turnover);
-  const bits = [`${turnover} div traded this week`];
+  const top = Object.entries(row.parts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .filter(([, v]) => v >= 0.6)
+    .map(([k]) => REASONS[k]);
 
-  if (row.valuable >= 15) bits.push(`${row.valuable} drops worth listing`);
-  if (row.topShare <= 0.4) bits.push(`no single item is more than ${Math.round(row.topShare * 100)}% of demand`);
-  else if (row.topShare >= 0.75) bits.push(`but ${Math.round(row.topShare * 100)}% of that is one item`);
-
-  if (row.momentum > 5) bits.push(`prices up ${row.momentum.toFixed(0)}% over seven days`);
-  else if (row.momentum < -5) bits.push(`prices down ${Math.abs(row.momentum).toFixed(0)}% over seven days`);
-
-  return `${row.name}: ${bits.join(', ')}.`;
+  if (!top.length) return `${row.name} leads on the balance of all four measures.`;
+  return `${row.name} leads on ${top.join(' and ')}.`;
 }

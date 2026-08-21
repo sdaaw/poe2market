@@ -1,4 +1,4 @@
-import { el, clear, fmt } from './util.js';
+import { el, clear, compact } from './util.js';
 import { analyseContent, explain, PROFILE_NOTES } from './analysis.js';
 import { currency } from './store.js';
 
@@ -76,10 +76,16 @@ export function mountInsight(host) {
 
     clear(panel).append(
       el('div', { class: 'insight__head' }, [
-        el('h3', { text: 'Where the money actually is' }),
-        el('p', {
-          text: 'Mechanics ranked on how much value their drops trade, how many are worth listing, and whether that value is spread or stuck on one item.'
-        })
+        el('h3', { text: 'Where the money actually is' })
+      ]),
+
+      el('div', { class: 'insight__legend' }, [
+        el('span', {}),
+        el('span', { text: 'Mechanic' }),
+        el('span', { title: 'Total value traded this week, in Divine Orbs', text: 'Traded' }),
+        el('span', { title: 'Distinct drops worth at least ~18 Exalted', text: 'Drops' }),
+        el('span', { title: 'Share of all demand sitting on its single biggest item', text: 'Top item' }),
+        el('span', { title: 'Volume-weighted price movement over seven days', text: '7d' })
       ]),
 
       el('div', { class: 'insight__rows' }, rows.slice(0, 6).map(rowEl)),
@@ -87,30 +93,43 @@ export function mountInsight(host) {
       el('p', { class: 'insight__why', text: explain(best) }),
 
       el('p', { class: 'insight__caveat' }, [
-        el('b', { text: 'What this is not: ' }),
-        'a divine-per-hour estimate. No public API exposes drop rates or clear times, so this measures demand — where value trades and whether you can sell into it — not how fast you generate it. A chase unique with eleven listings sets a ceiling, not an income.'
+        el('b', { text: 'Demand, not yield. ' }),
+        'No public API exposes drop rates, so this shows where value trades and whether you can sell into it — not how fast you farm it.'
       ])
     );
   };
 }
 
+/** One row per mechanic, showing the four numbers the ranking is actually built on. */
 function rowEl(row, i) {
+  const momentum = row.momentum;
+  const trend = momentum > 0.5 ? 'up' : momentum < -0.5 ? 'down' : 'flat';
+
   return el('div', { class: `insight__row${i === 0 ? ' is-best' : ''}` }, [
     el('span', { class: 'insight__rank', text: i + 1 }),
 
     el('div', { class: 'insight__main' }, [
       el('div', { class: 'insight__name' }, [
         row.name,
-        row.general && el('span', { class: 'insight__general', title: 'Drops broadly, not from one mechanic', text: 'general' })
+        row.general &&
+          el('span', { class: 'insight__general', title: 'Drops broadly, not from one mechanic', text: 'gen' })
       ]),
-      el('div', { class: 'insight__meta', text: `${fmt(row.turnover)} div · ${row.valuable} drops · ${PROFILE_NOTES[row.profile]}` })
+      el('div', {
+        class: `insight__profile is-${row.profile}`,
+        title: PROFILE_NOTES[row.profile],
+        text: row.profile
+      })
     ]),
 
-    el('div', { class: 'insight__score' }, [
-      el('div', { class: 'insight__bar' }, [
-        el('div', { class: 'insight__fill', style: `width:${Math.max(4, row.score * 100)}%` })
-      ]),
-      el('span', { class: `insight__profile is-${row.profile}`, text: row.profile })
-    ])
+    el('span', { class: 'insight__num', text: compact(row.turnover) }),
+    el('span', { class: 'insight__num', text: row.valuable }),
+    el('span', {
+      class: `insight__num${row.topShare >= 0.75 ? ' is-warn' : ''}`,
+      text: `${Math.round(row.topShare * 100)}%`
+    }),
+    el('span', {
+      class: `insight__num is-${trend}`,
+      text: trend === 'flat' ? '—' : `${momentum > 0 ? '+' : ''}${Math.round(momentum)}%`
+    })
   ]);
 }
