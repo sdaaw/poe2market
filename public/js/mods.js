@@ -112,3 +112,37 @@ export function modSummary(item) {
     plain: standout.length === 0
   };
 }
+
+/* ---------- randomised rolls ---------- */
+
+let variantIndex = null;
+let variantSnapshot = null;
+
+/** Every line sharing a name, so one roll can be compared against its siblings. */
+function byName() {
+  if (variantSnapshot === state.snapshot && variantIndex) return variantIndex;
+  variantIndex = new Map();
+  for (const item of state.snapshot?.items ?? []) {
+    if (!variantIndex.has(item.name)) variantIndex.set(item.name, []);
+    variantIndex.get(item.name).push(item);
+  }
+  variantSnapshot = state.snapshot;
+  return variantIndex;
+}
+
+/**
+ * The priced roll combinations of this unique, dearest first.
+ *
+ * Only PoE1 has these: poe.ninja prices each rolled variant of a PoE1 unique
+ * separately, which is what lets "Gem Level, Blue Requirements" sit at 6,788 div
+ * while "Blue Requirements" alone sits at 0.71. PoE2 publishes one averaged price
+ * per unique regardless of what it rolled, so there is nothing to compare.
+ */
+export function variantsOf(item) {
+  if (!item.variant) return [];
+  const siblings = (byName().get(item.name) ?? []).filter((i) => i.variant);
+  return siblings.length > 1 ? [...siblings].sort((a, b) => b.divine - a.divine) : [];
+}
+
+/** Items whose modifiers are randomised but whose rolls are not priced apart. */
+export const pooledRolls = (item) => item.randomised ?? [];

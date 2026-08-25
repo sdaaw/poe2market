@@ -55,6 +55,14 @@ function cleanTags(text) {
 
 const mods = (list) => (list ?? []).map((m) => cleanTags(m.text));
 
+/**
+ * Modifiers the feed marks `optional` — the item's randomised pool. An individual
+ * copy carries only some of them, which is why two of the same unique can be
+ * worth wildly different amounts.
+ */
+const randomised = (...lists) =>
+  lists.flatMap((list) => (list ?? []).filter((m) => m.optional).map((m) => cleanTags(m.text)));
+
 /* ---------- leagues ---------- */
 
 export async function fetchLeagues(realm) {
@@ -103,7 +111,8 @@ function normalisePoe2Items(payload, category, toDivine) {
     implicit: mods(line.implicitModifiers),
     granted: mods(line.grantedSkillModifiers),
     properties: mods(line.propertyModifiers),
-    requirements: mods(line.requirementModifiers)
+    requirements: mods(line.requirementModifiers),
+    randomised: randomised(line.explicitModifiers, line.implicitModifiers)
   }));
 }
 
@@ -130,7 +139,13 @@ function normalisePoe1Items(payload, category) {
     implicit: mods(line.implicitModifiers),
     granted: [],
     properties: [],
-    requirements: []
+    requirements: [],
+    randomised: randomised(line.explicitModifiers, line.implicitModifiers),
+    // PoE1 prices each rolled combination separately. `variant` names the roll
+    // ("Gem Level, Blue Requirements") and `mutated` is what it actually rolled,
+    // which is how two copies of one unique end up thousands of Divine apart.
+    variant: line.variant ?? null,
+    mutated: mods(line.mutatedModifiers)
   }));
 }
 

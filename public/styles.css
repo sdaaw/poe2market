@@ -632,3 +632,27 @@ button { font: inherit; color: inherit; }
 .tip__more { margin: 8px 0 0; font-size: 10.5px; color: var(--faint); }
 
 @media (max-width: 720px) { .tip { display: none; } }
+
+/* Roll ladder: what each priced combination of one unique sells for. */
+.tip__rolls { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 5px; }
+.tip__rolls li {
+  display: grid; grid-template-columns: 62px minmax(0, 1fr) auto auto;
+  gap: 8px; align-items: baseline;
+}
+.tip__rolls li.is-current { background: var(--surface-2); border-radius: 4px; padding: 2px 4px; margin: -2px -4px; }
+.tip__rolls li.is-current .tip__variant { color: var(--text); font-weight: 500; }
+
+.tip__price { font-family: var(--mono); font-size: 11.5px; color: var(--text); text-align: right; }
+.tip__variant { font-size: 11.5px; color: var(--muted); line-height: 1.3; }
+.tip__listings { font-family: var(--mono); font-size: 9.5px; color: var(--faint); }
+
+.tip__warn {
+  margin: 8px 0 0; padding-top: 8px; border-top: 1px solid var(--line-soft);
+  font-size: 10.5px; line-height: 1.45; color: var(--faint);
+}
+
+.item__variant {
+  margin-left: 6px; padding: 0 5px; border-radius: 3px;
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  color: var(--muted); font-size: 10.5px;
+}

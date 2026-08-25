@@ -172,6 +172,35 @@ at, and closing the panel leaves them there. The panel has a copy-link button.
   rather than just hiding, so the URL never disagrees with the screen.
 - A stale or unknown id drops the parameter instead of leaving a dead URL.
 
+## Which roll makes it expensive
+
+Most uniques roll a random subset of their modifiers, and which subset decides
+almost everything about the price. **PoE1 prices each combination separately**, so
+hovering a row shows the ladder:
+
+```
+Foulborn Dialla's Malefaction — what each roll sells for
+  ▸ 6,788 div   Gem Level, Blue Requirements
+      85.8 div  Gem Level              6L
+      1.93 div  Blue Requirements      6L
+       169 chaos Blue Requirements
+    The best roll is worth 9561x the worst.
+```
+
+1,028 priced roll variants across 415 PoE1 uniques. Link count is shown beside
+each, because a six-link and an unlinked copy of the same roll are different
+markets and would otherwise look like contradictory prices for one thing. The same
+roll names now appear in the item rows, which previously repeated a unique several
+times with no way to tell the entries apart.
+
+**PoE2 has none of this.** Zero variant lines in any category — poe.ninja
+publishes one averaged price per unique no matter what it rolled. So for a PoE2
+Mageblood the tooltip names the 16-modifier pool and says plainly that the price is
+an average across good and bad rolls, rather than implying a precision the feed
+does not have. The pool comes from the feed's own `optional` flag; a pool under
+three modifiers is ignored, since Headhunter's two charm-slot lines are randomised
+and irrelevant next to the modifier no other unique has.
+
 ## What sets a unique apart
 
 Hovering a row in the uniques table shows the modifiers that appear on **no other

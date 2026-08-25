@@ -131,7 +131,7 @@ export function sparkline(data, change) {
 
 /* ---------- shared fragments ---------- */
 
-export function itemCell(entry, { plain = false, note = null } = {}) {
+export function itemCell(entry, { plain = false, note = null, tag = null } = {}) {
   return el('div', { class: 'item' }, [
     entry.icon &&
       el('img', {
@@ -146,7 +146,12 @@ export function itemCell(entry, { plain = false, note = null } = {}) {
     el('div', { class: 'item__text' }, [
       el('div', { class: `item__name${plain ? ' plain' : ''}`, text: entry.name }),
       (entry.baseType || entry.slot || entry.category) &&
-        el('div', { class: 'item__base', text: entry.baseType || entry.slot || entry.category }),
+        el('div', { class: 'item__base' }, [
+          entry.baseType || entry.slot || entry.category,
+          // PoE1 lists one row per rolled combination; without the roll's name
+          // those rows look identical.
+          tag && el('span', { class: 'item__variant', text: tag })
+        ]),
       note
     ])
   ]);
