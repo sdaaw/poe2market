@@ -116,7 +116,27 @@ No build step for the frontend and no framework — the browser loads ES modules
 directly. All asset paths are relative so the site works from a project subpath
 (`user.github.io/repo/`) as well as a domain root.
 
-The snapshot is ~1 MB of JSON, about 213 KB gzipped, fetched once per visit.
+### Payload
+
+Each league ships as two files. Prices, names and everything the tables sort on
+go in the core file; **modifier text and flavour go in a second file fetched in
+the background**, because it is over a third of the weight and nothing on the
+landing page reads it.
+
+| | First paint | Deferred | Was |
+| --- | --- | --- | --- |
+| PoE 2 | 110 KB | +100 KB | 215 KB |
+| PoE 1 | 267 KB | +279 KB | 568 KB |
+
+All gzipped. Roughly half the bytes before anything renders, and a reader who only
+looks at the Overview or Currency never pays for the rest.
+
+When the text lands it is merged into the existing item objects, so every view
+goes on reading `item.explicit` and only needs to know *when* the text became
+available, not where it came from. Three caches key off that: the modifier index,
+the search haystacks, and the open detail panel. The search re-runs its current
+filters rather than re-rendering, so a query typed during the gap survives. A
+league switch mid-flight is discarded rather than merged into the wrong snapshot.
 
 ## The "what should I farm" chip
 

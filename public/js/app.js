@@ -1,5 +1,5 @@
 import { el, clear, fmt, timeAgo } from './util.js';
-import { state, subscribe, loadLeagues, loadSnapshot, findBySlug, leaguesFor } from './store.js';
+import { state, subscribe, loadLeagues, loadSnapshot, findBySlug, leaguesFor, hasMods } from './store.js';
 import { hideDetail, showDetail } from './detail.js';
 import { parseHash, viewHash, forgetPushedItem } from './router.js';
 import { renderOverview } from './views/overview.js';
@@ -153,6 +153,8 @@ function render() {
 
 let shownSlug = null;
 let shownSnapshot = null;
+// Modifier text arrives after prices; a panel opened before it should fill in.
+let shownMods = false;
 
 /** Drives the detail panel purely from the URL, including on a cold deep link. */
 function syncDetail(slug) {
@@ -165,12 +167,13 @@ function syncDetail(slug) {
 
   // Every store update re-renders; rebuilding an unchanged panel would restart
   // its history fetch and throw away the reader's place in it.
-  if (slug === shownSlug && state.snapshot === shownSnapshot) return;
+  if (slug === shownSlug && state.snapshot === shownSnapshot && shownMods === hasMods()) return;
 
   const entry = findBySlug(slug);
   if (entry) {
     shownSlug = slug;
     shownSnapshot = state.snapshot;
+    shownMods = hasMods();
     showDetail(entry);
     return;
   }

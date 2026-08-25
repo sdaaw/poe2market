@@ -1,7 +1,7 @@
 import { el, priceCell, priceLabel, listingLabel, deltaEl, sparkline, itemCell, searchIcon, highlight } from '../util.js';
 import { createTable } from '../table.js';
 import { openDetail } from '../detail.js';
-import { items, rates } from '../store.js';
+import { items, rates, modsReady } from '../store.js';
 import { modSummary, variantsOf, pooledRolls } from '../mods.js';
 import { showTip, moveTip, hideTip } from '../tooltip.js';
 
@@ -35,7 +35,7 @@ const STAT_PICKS = [
  * One lowercase haystack per item, built once per visit to this page rather than
  * on every keystroke. Mods are the whole point of the search, so they lead.
  */
-const haystacks = new WeakMap();
+let haystacks = new WeakMap();
 
 function searchable(item) {
   let cached = haystacks.get(item);
@@ -241,6 +241,16 @@ export function renderUniques() {
   }
 
   apply();
+
+  // Modifier text arrives after the prices. Rebuild the search index and re-run
+  // the current filters — apply() only replaces rows, so the reader keeps their
+  // query, category and place on the page.
+  modsReady().then((loaded) => {
+    if (!loaded) return;
+    haystacks = new WeakMap();
+    apply();
+  });
+
   return page;
 }
 

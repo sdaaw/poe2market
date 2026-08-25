@@ -83,6 +83,7 @@ export async function loadSnapshot(league = state.league, realm = state.realm) {
 
   try {
     state.snapshot = await getJson(`data/${entry.file}`, { fresh: true });
+    hydrateMods(entry, state.snapshot);
   } catch (err) {
     state.error = err.message;
     state.snapshot = null;
@@ -91,6 +92,47 @@ export async function loadSnapshot(league = state.league, realm = state.realm) {
     emit();
   }
 }
+
+/* ---------- modifier text ---------- */
+
+let modsPromise = Promise.resolve(false);
+
+/**
+ * Modifier text is over a third of a snapshot and nothing on the landing page
+ * needs it, so it arrives as a second file in the background.
+ *
+ * The fields are merged into the existing item objects rather than kept apart,
+ * which means every view goes on reading `item.explicit` and only has to know
+ * when the text became available — not where it came from.
+ */
+function hydrateMods(entry, snapshot) {
+  if (!entry.mods) {
+    snapshot.modsLoaded = true; // older build without a split; text is already inline
+    return;
+  }
+
+  modsPromise = getJson(`data/${entry.mods}`)
+    .then((byKey) => {
+      // A league switch mid-flight must not pour one league's text into another.
+      if (state.snapshot !== snapshot) return false;
+
+      const items = new Map(snapshot.items.map((i) => [i.key, i]));
+      for (const [key, fields] of Object.entries(byKey)) {
+        const item = items.get(key);
+        if (item) Object.assign(item, fields);
+      }
+      snapshot.modsLoaded = true;
+      emit();
+      return true;
+    })
+    .catch(() => false);
+}
+
+/** Resolves once modifier text has been merged in (or immediately if it failed). */
+export const modsReady = () => modsPromise;
+
+/** Whether item.explicit and friends can be trusted yet. */
+export const hasMods = () => Boolean(state.snapshot?.modsLoaded);
 
 /* ---------- derived selectors ---------- */
 

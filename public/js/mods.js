@@ -13,7 +13,7 @@
  * upside from a defining downside, so this labels distinctiveness and leaves the
  * judgement to the reader.
  */
-import { state } from './store.js';
+import { state, hasMods } from './store.js';
 
 /** Collapse numeric rolls so the same stat groups regardless of its numbers. */
 export const normaliseMod = (text) =>
@@ -39,7 +39,10 @@ let indexedSnapshot = null;
  * six-link and its unlinked twin don't inflate every mod they share.
  */
 function modIndex() {
-  if (indexedSnapshot === state.snapshot && index) return index;
+  // Keyed on the text having arrived too, or an index built before hydration
+  // would report every modifier as unshared.
+  const stamp = `${state.snapshot?.league}:${hasMods()}`;
+  if (indexedSnapshot === stamp && index) return index;
 
   const seen = new Map(); // base name -> item (best supplied wins)
   for (const item of state.snapshot?.items ?? []) {
@@ -54,7 +57,7 @@ function modIndex() {
       index.set(mod, (index.get(mod) ?? 0) + 1);
     }
   }
-  indexedSnapshot = state.snapshot;
+  indexedSnapshot = stamp;
   return index;
 }
 

@@ -31,6 +31,32 @@ const write = (file, data) => writeFile(path.join(OUT, file), JSON.stringify(dat
 
 const kb = (value) => `${Math.round(JSON.stringify(value).length / 1024)} KB`;
 
+/**
+ * Modifier text is over a third of a snapshot and nothing on the landing page
+ * needs it, so it ships as a separate file the browser fetches in the background.
+ * Halves what a reader downloads before seeing anything.
+ */
+const MOD_FIELDS = [
+  'explicit', 'implicit', 'granted', 'properties',
+  'requirements', 'flavour', 'randomised', 'mutated'
+];
+
+function splitMods(snapshot) {
+  const mods = {};
+  const items = snapshot.items.map((item) => {
+    const carried = {};
+    const core = { ...item };
+    for (const field of MOD_FIELDS) {
+      const value = item[field];
+      if (Array.isArray(value) ? value.length : value) carried[field] = value;
+      delete core[field];
+    }
+    if (Object.keys(carried).length) mods[item.key] = carried;
+    return core;
+  });
+  return { core: { ...snapshot, items }, mods };
+}
+
 async function buildRealm(realmId) {
   const cfg = REALMS[realmId];
   const leagues = await fetchIndexedLeagues(realmId);
@@ -49,8 +75,13 @@ async function buildRealm(realmId) {
 
     const id = `${realmId}-${slug(league.id)}`;
     const file = `${id}.json`;
-    await write(file, snapshot);
+    const modFile = `${id}-mods.json`;
 
+    const { core, mods } = splitMods(snapshot);
+    await write(file, core);
+    await write(modFile, mods);
+
+    // History records prices, which live in the core half.
     const hist = await updateHistory(snapshot, HISTORY, id);
     written.push({
       realm: realmId,
@@ -59,11 +90,13 @@ async function buildRealm(realmId) {
       id: league.id,
       name: league.name,
       file,
+      mods: modFile,
       history: hist.file
     });
 
     console.log(
-      `${snapshot.items.length} items, ${snapshot.currency.length} currency, ${kb(snapshot)} -> data/${file}`
+      `${snapshot.items.length} items, ${snapshot.currency.length} currency -> ` +
+        `data/${file} (${kb(core)}) + data/${modFile} (${kb(mods)})`
     );
     console.log(
       `      history: ${hist.days} day(s) since ${hist.since}, ${hist.series} series` +
@@ -111,7 +144,7 @@ async function main() {
 
   // Drop snapshots for leagues that are no longer indexed. Only prunes realms we
   // actually rebuilt, so a single-realm run cannot delete the other's data.
-  const keep = new Set([...written.map((w) => w.file), 'leagues.json']);
+  const keep = new Set([...written.flatMap((w) => [w.file, w.mods]), 'leagues.json']);
   for (const file of await readdir(OUT)) {
     if (!file.endsWith('.json') || keep.has(file)) continue;
     if (only && !file.startsWith(`${only}-`)) continue;
