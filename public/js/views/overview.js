@@ -1,7 +1,9 @@
-import { el, fmt, compact, priceLabel, priceCell, listingLabel, deltaEl, sparkline, itemCell, section, statTile } from '../util.js';
+import { el, clear, fmt, compact, priceLabel, priceCell, listingLabel, deltaEl, sparkline, itemCell, section, statTile } from '../util.js';
 import { createTable } from '../table.js';
 import { openDetail } from '../detail.js';
 import { items, currency, rates, findCurrency, liquid, meaningful } from '../store.js';
+import { loadHistory } from '../history.js';
+import { movementSince, markSeen } from '../sincelast.js';
 
 export function renderOverview() {
   const r = rates();
@@ -15,13 +17,18 @@ export function renderOverview() {
 
   const page = el('div');
 
+  // Filled asynchronously; stays empty and invisible when there is nothing new.
+  const sinceSlot = el('div');
+  renderSinceLast(sinceSlot);
+
   page.append(
     el('div', { class: 'page-head' }, [
       el('h1', { text: 'The state of the economy' }),
       el('p', {
         text: 'Every price below is a league-wide average from poe.ninja, quoted in Divine Orbs. Click any row to see the full item.'
       })
-    ])
+    ]),
+    sinceSlot
   );
 
   /* ---- headline numbers ---- */
@@ -157,4 +164,68 @@ function moverCard(title, rows, r) {
         : el('div', { class: 'empty', text: 'No meaningful movement.' })
     )
   ]);
+}
+
+/**
+ * "Since you were last here" — filled in once the history file arrives, and only
+ * when it has something to report.
+ */
+async function renderSinceLast(slot) {
+  const history = await loadHistory();
+  if (!history) return;
+
+  const report = movementSince(history);
+  if (!report) return;
+
+  // First visit has no baseline; note where they came in and stay quiet.
+  if (report.firstVisit) {
+    markSeen(report.latest);
+    return;
+  }
+  if (!report.movers.length) {
+    markSeen(report.latest);
+    return;
+  }
+
+  const r = rates();
+  const SHOWN = 8;
+  const { movers, days } = report;
+  const up = movers.filter((m) => m.change > 0).length;
+
+  clear(slot).append(
+    el('div', { class: 'since' }, [
+      el('div', { class: 'since__head' }, [
+        el('div', {}, [
+          el('h2', { class: 'since__title', text: 'While you were away' }),
+          el('p', {
+            class: 'since__sub',
+            text: `${movers.length} market${movers.length === 1 ? '' : 's'} moved more than ${Math.round(report.threshold)}% over the last ${days} day${days === 1 ? '' : 's'} — ${up} up, ${movers.length - up} down.`
+          })
+        ]),
+        el('button', {
+          class: 'since__dismiss',
+          type: 'button',
+          text: 'Mark as seen',
+          onclick: () => {
+            markSeen(report.latest);
+            slot.remove();
+          }
+        })
+      ]),
+      el('div', { class: 'since__rows' }, movers.slice(0, SHOWN).map((m) =>
+        el('div', { class: 'row clickable', onclick: () => openDetail(m.entry) }, [
+          m.entry.icon && el('img', { class: 'row__icon', src: m.entry.icon, alt: '', loading: 'lazy' }),
+          el('div', { class: 'row__main' }, [
+            el('div', { class: 'row__label', text: m.entry.name }),
+            el('div', { class: 'row__sub', text: m.entry.baseType || m.entry.category })
+          ]),
+          el('div', { class: 'price__alt', text: `${priceLabel(m.before, r)} → ${priceLabel(m.now, r)}` }),
+          deltaEl(m.change)
+        ])
+      )),
+      movers.length > SHOWN
+        ? el('p', { class: 'since__more', text: `+${movers.length - SHOWN} more` })
+        : null
+    ])
+  );
 }

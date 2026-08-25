@@ -172,6 +172,30 @@ at, and closing the panel leaves them there. The panel has a copy-link button.
   rather than just hiding, so the URL never disagrees with the screen.
 - A stale or unknown id drops the parameter instead of leaving a dead URL.
 
+## While you were away
+
+Every other view answers "what is true now". The Overview opens with what changed
+**since your last visit**, which is the first thing the accumulated history buys
+beyond a chart:
+
+> **While you were away** — 51 markets moved more than 40% over the last 4 days,
+> 37 up and 14 down.
+> Skin of the Loyal 33.1 ex → 103 ex **+212%**
+
+- The last-visit date lives in `localStorage` **per league**, since prices are per
+  league and hearing that Standard moved while you play the challenge league is
+  noise. The comparison itself comes from the shared history file, so two people
+  returning after the same gap see the same numbers.
+- **The bar rises with the gap**, at 20% × √days. A 20% move overnight is news; the
+  same move spread over a fortnight is drift. Flat-rate 20% reported 585 "movers"
+  for a four-day PoE1 absence, which is a list nobody reads — scaled, it is 298 at
+  a stated 40% bar, and the copy always names the threshold it used.
+- It uses the same liquidity guard as the movers list, so a thin market cannot post
+  a four-digit percentage and be believed.
+- A first visit has no baseline and a second visit the same day has no new reading,
+  so both stay silent rather than inventing something to say. "Mark as seen" moves
+  the baseline forward.
+
 ## Which roll makes it expensive
 
 Most uniques roll a random subset of their modifiers, and which subset decides

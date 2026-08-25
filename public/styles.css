@@ -656,3 +656,36 @@ button { font: inherit; color: inherit; }
   background: var(--surface-2); border: 1px solid var(--line-soft);
   color: var(--muted); font-size: 10.5px;
 }
+
+/* ---------- since your last visit ---------- */
+
+.since {
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line-soft));
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 44px;
+}
+
+.since__head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; margin-bottom: 6px;
+}
+.since__title { margin: 0 0 3px; font-size: 14px; font-weight: 600; }
+.since__sub { margin: 0 0 8px; font-size: 12.5px; color: var(--muted); }
+
+.since__dismiss {
+  flex-shrink: 0; padding: 5px 10px; border-radius: 8px;
+  background: transparent; border: 1px solid var(--line);
+  color: var(--muted); font-size: 12px; cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.since__dismiss:hover { color: var(--text); border-color: var(--faint); }
+
+.since__rows { display: flex; flex-direction: column; }
+.since__more { margin: 10px 0 0; font-size: 12px; color: var(--faint); }
+
+@media (max-width: 720px) {
+  .since__head { flex-direction: column; gap: 8px; }
+  .since__dismiss { align-self: flex-start; }
+}
