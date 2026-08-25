@@ -1,4 +1,4 @@
-# PoE2 Market
+# PoE Market
 
 An economy tracker for **both Path of Exile games**: the most expensive uniques,
 currency exchange rates, and a page of statistics you can't get from a plain price
@@ -25,7 +25,7 @@ PoE1 tracks uniques only. `BaseType` (20k rare bases) and `SkillGem` (7.5k gem
 permutations) are 13 MB between them and are a different kind of thing from what
 this site does.
 
-Data comes from the [poe.ninja PoE2 economy API](https://poe.ninja/docs/api).
+Data comes from the [poe.ninja economy API](https://poe.ninja/docs/api).
 
 **It is a fully static site with no dependencies** — not a single npm package, and
 no server in production. A scheduled GitHub Action fetches the economy, writes it
@@ -135,6 +135,12 @@ how old it is):
 | Breadth | 25% | How many distinct drops clear a worthwhile price? |
 | Consistency | 25% | Is the value spread, or does one item carry the whole category? |
 | Momentum | 15% | Volume-weighted 7-day movement, clamped so a spike can't buy the top spot. |
+
+Alongside the ranking, each row shows how that mechanic's **traded value** has moved
+over the recorded history — demand momentum, which is a different question from the
+price momentum in the score: turnover can climb while unit prices sit still. It is
+shown but deliberately **not scored**, so the weights above remain the whole story
+of how mechanics are ordered.
 
 Consistency is what stops the obvious mistake. Idols currently post some of the
 strongest momentum of any mechanic and still rank near the bottom, because 96% of

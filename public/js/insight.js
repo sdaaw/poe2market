@@ -1,6 +1,7 @@
 import { el, clear, compact } from './util.js';
 import { analyseContent, explain, PROFILE_NOTES } from './analysis.js';
 import { currency } from './store.js';
+import { loadHistory } from './history.js';
 
 /**
  * The small "what should I farm" chip in the header, plus the panel it opens.
@@ -56,9 +57,22 @@ export function mountInsight(host) {
 
   host.append(chip, panel);
 
-  return function update() {
-    const rows = analyseContent(currency());
+  // Guards against a league switch landing after a slower history fetch.
+  let generation = 0;
 
+  return function update() {
+    const token = ++generation;
+
+    draw(analyseContent(currency()));
+
+    // History is a separate download; the panel is useful without it, so fill the
+    // turnover trends in once it lands rather than waiting.
+    loadHistory().then((history) => {
+      if (history && token === generation) draw(analyseContent(currency(), history));
+    });
+  };
+
+  function draw(rows) {
     if (rows.length < 3) {
       host.hidden = true;
       return;
@@ -82,10 +96,10 @@ export function mountInsight(host) {
       el('div', { class: 'insight__legend' }, [
         el('span', {}),
         el('span', { text: 'Mechanic' }),
-        el('span', { title: 'Total value traded this week, in Divine Orbs', text: 'Traded' }),
+        el('span', { title: 'Total value traded this week, in Divine Orbs, and how that has moved', text: 'Traded' }),
         el('span', { title: 'Distinct drops worth at least ~18 Exalted', text: 'Drops' }),
         el('span', { title: 'Share of all demand sitting on its single biggest item', text: 'Top item' }),
-        el('span', { title: 'Volume-weighted price movement over seven days', text: '7d' })
+        el('span', { title: 'Volume-weighted price movement over seven days', text: 'Price' })
       ]),
 
       el('div', { class: 'insight__rows' }, rows.slice(0, 6).map(rowEl)),
@@ -97,7 +111,7 @@ export function mountInsight(host) {
         'No public API exposes drop rates, so this shows where value trades and whether you can sell into it — not how fast you farm it.'
       ])
     );
-  };
+  }
 }
 
 /** One row per mechanic, showing the four numbers the ranking is actually built on. */
@@ -121,7 +135,16 @@ function rowEl(row, i) {
       })
     ]),
 
-    el('span', { class: 'insight__num', text: compact(row.turnover) }),
+    el('div', { class: 'insight__stack' }, [
+      el('span', { class: 'insight__num', text: compact(row.turnover) }),
+      row.trend
+        ? el('span', {
+            class: `insight__trend is-${row.trend.change > 2 ? 'up' : row.trend.change < -2 ? 'down' : 'flat'}`,
+            title: `Traded value across the last ${row.trend.days} days`,
+            text: `${row.trend.change > 0 ? '+' : ''}${Math.round(row.trend.change)}%`
+          })
+        : null
+    ]),
     el('span', { class: 'insight__num', text: row.valuable }),
     el('span', {
       class: `insight__num${row.topShare >= 0.75 ? ' is-warn' : ''}`,

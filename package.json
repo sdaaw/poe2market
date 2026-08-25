@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Static Path of Exile 2 economy tracker - most expensive uniques, currency rates and market statistics.",
+  "description": "Static Path of Exile 1 and 2 economy tracker - most expensive uniques, currency rates and market statistics.",
   "scripts": {
     "refresh": "node scripts/snapshot.js",
     "start": "node server/index.js",
     "build": "npm run refresh"
   },
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  }
 }

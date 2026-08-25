@@ -96,7 +96,31 @@ const WEIGHTS = { depth: 0.35, breadth: 0.25, consistency: 0.25, momentum: 0.15 
  * Builds one row per mechanic from the currency lines, scores them, and returns
  * them ranked. `currency` is the normalised array from a snapshot.
  */
-export function analyseContent(currency) {
+/** Readings to look back over for the turnover trend — a rolling week. */
+const TREND_WINDOW = 7;
+
+/**
+ * How a mechanic's traded value has moved over the recorded window.
+ *
+ * This is demand momentum, which is a different question from the price momentum
+ * already in the ranking: turnover rising means more value changing hands, even
+ * if unit prices are flat.
+ */
+function turnoverTrend(history, mechanic) {
+  const series = history?.mechanics?.[mechanic]?.turnover;
+  if (!series) return null;
+
+  const points = series.filter((v) => v !== null && Number.isFinite(v)).slice(-TREND_WINDOW);
+  if (points.length < 2 || points[0] <= 0) return null;
+
+  return {
+    series: points,
+    change: (points[points.length - 1] / points[0] - 1) * 100,
+    days: points.length
+  };
+}
+
+export function analyseContent(currency, history = null) {
   const groups = new Map();
   for (const line of currency) {
     // The base currency category is the unit of account, not farmable content.
@@ -156,6 +180,9 @@ export function analyseContent(currency) {
       WEIGHTS.consistency * consistency[i] +
       WEIGHTS.momentum * momentum[i];
     row.profile = profileOf(row);
+    // Shown, not scored: the ranking weights stay as documented, and this is
+    // extra context rather than a silent change to how mechanics are ordered.
+    row.trend = turnoverTrend(history, row.mechanic);
   });
 
   return rows.sort((a, b) => b.score - a.score);
@@ -201,6 +228,13 @@ export function explain(row) {
     .filter(([, v]) => v >= 0.6)
     .map(([k]) => REASONS[k]);
 
-  if (!top.length) return `${row.name} leads on the balance of all four measures.`;
-  return `${row.name} leads on ${top.join(' and ')}.`;
+  const lead = top.length
+    ? `${row.name} leads on ${top.join(' and ')}.`
+    : `${row.name} leads on the balance of all four measures.`;
+
+  if (row.trend && Math.abs(row.trend.change) >= 10) {
+    const direction = row.trend.change > 0 ? 'up' : 'down';
+    return `${lead} Traded value is ${direction} ${Math.abs(row.trend.change).toFixed(0)}% across ${row.trend.days} days.`;
+  }
+  return lead;
 }
