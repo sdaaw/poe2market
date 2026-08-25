@@ -172,6 +172,44 @@ at, and closing the panel leaves them there. The panel has a copy-link button.
   rather than just hiding, so the URL never disagrees with the screen.
 - A stale or unknown id drops the parameter instead of leaving a dead URL.
 
+## What sets a unique apart
+
+Hovering a row in the uniques table shows the modifiers that appear on **no other
+unique**, which is usually the reason anyone buys the item. Headhunter's life and
+strength rolls are shared with 185 and 78 other uniques; "you gain its Modifiers
+for 60 seconds" is shared with none. Modifiers that roll a range are marked, since
+there the number is the buying decision — Temporalis is a different item at −2.0
+seconds than at −1.09.
+
+Modifiers are normalised (`(205-299)% increased Physical Damage` →
+`#% increased Physical Damage`) and counted across distinct uniques, collapsing
+variants so a six-link and its unlinked twin don't double-count everything they
+share.
+
+**It measures how rare a modifier is, not how good.** The Gnashing Sash's "Lose 5%
+of maximum Life per second" is rare and is a drawback. Nothing in price data
+separates a defining upside from a defining downside, so the tooltip labels
+distinctiveness and leaves the judgement to the reader.
+
+### Why there is no "which modifiers make items expensive" ranking
+
+Because it does not survive contact with the data. Ranking modifiers by the price
+of items carrying them puts *"Magic Utility Flasks cannot be Used"* on top at 1302×
+the baseline — that is Mageblood's own modifier, six listings of one item. Collapse
+variants and require a real sample and the signal vanishes: the best genuine stat
+lands at 1.3×, which is noise.
+
+The cause is structural. Modifiers shared by enough uniques to measure are the
+generic ones, and those carry no pricing power; **773 of PoE2's 1,464 modifiers
+appear on exactly one unique**, which is precisely why those items are worth
+something and precisely why they can never clear a statistical bar.
+
+Exclusivity itself only predicts value in one game. Rich PoE2 uniques draw 58% of
+their modifiers from lines nothing else has, against 33% for cheap ones — but in
+PoE1 that reverses (19% vs 33%), and its most expensive item, Demigod's Beacon at
+5,558 div, has *no* exclusive modifiers at all. It is a tournament prize; its price
+is scarcity, which appears nowhere in the modifier text.
+
 ## Price history
 
 poe.ninja gives seven sparkline points and nothing older, so the site keeps its

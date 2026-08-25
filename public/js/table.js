@@ -7,6 +7,8 @@ import { el, clear } from './util.js';
  */
 export function createTable({ columns, rows, sortKey, dir = 'desc', onRow, limit = 250 }) {
   const wrap = el('div', { class: 'card card--pad0 scroll-x' });
+  // Lets callers map a hovered <tr> back to the row it was built from.
+  wrap.rowData = new Map();
   const table = el('table', { class: 'table' });
   const thead = el('thead');
   const tbody = el('tbody');
@@ -45,6 +47,7 @@ export function createTable({ columns, rows, sortKey, dir = 'desc', onRow, limit
   function render() {
     clear(thead).append(el('tr', {}, columns.map(headerCell)));
     clear(tbody);
+    wrap.rowData.clear();
 
     const col = columns.find((c) => c.key === sort.key);
     const read = col?.value ?? ((r) => r[sort.key]);
@@ -71,6 +74,7 @@ export function createTable({ columns, rows, sortKey, dir = 'desc', onRow, limit
         )
       );
       if (onRow) tr.addEventListener('click', () => onRow(row));
+      wrap.rowData.set(tr, row);
       tbody.append(tr);
     });
 
