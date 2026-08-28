@@ -5,6 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>PoE Market — Path of Exile 1 &amp; 2 economy tracker</title>
 <meta name="description" content="Live Path of Exile 1 and 2 economies: the most expensive uniques, currency exchange rates and market statistics." />
+<!--
+  Content Security Policy.
+
+  GitHub Pages cannot send custom response headers, so this is declared as a meta
+  tag. That covers every directive below; frame-ancestors, report-to and sandbox
+  are header-only and are simply not available on this host. server/index.js sends
+  the same policy as a real header so local development matches production.
+
+  default-src 'none' means anything not listed is refused, so a new external
+  dependency fails loudly here rather than loading quietly.
+    script-src   own modules only. There is no inline script and no eval.
+    style-src    'unsafe-inline' is required: bar widths and tooltip positions are
+                 computed at runtime and written as style attributes. Nothing
+                 injects <style> blocks, and script-src is what stops XSS.
+    img-src      item icons come from poecdn; data: is the inline SVG favicon.
+    connect-src  every fetch is a relative path to our own JSON.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://web.poecdn.com; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />

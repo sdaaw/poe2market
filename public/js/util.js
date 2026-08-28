@@ -7,7 +7,9 @@ export function el(tag, props = {}, children = []) {
     if (v === null || v === undefined || v === false) continue;
     if (k === 'class') node.className = v;
     else if (k === 'text') node.textContent = v;
-    else if (k === 'html') node.innerHTML = v;
+    // No `html` escape hatch on purpose: every string rendered here comes from an
+    // upstream feed or the search box, and there is no case in this app that
+    // needs markup. Removing it means no caller can reintroduce an injection.
     else if (k === 'dataset') Object.assign(node.dataset, v);
     else if (k.startsWith('on')) node.addEventListener(k.slice(2).toLowerCase(), v);
     else node.setAttribute(k, v === true ? '' : v);

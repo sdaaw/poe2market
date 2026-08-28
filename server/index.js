@@ -16,6 +16,19 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
 const PORT = Number(process.env.PORT || 3000);
 
+/** Kept in step with the meta tag in public/index.html. */
+const CSP = [
+  "default-src 'none'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  'font-src https://fonts.gstatic.com',
+  "img-src 'self' data: https://web.poecdn.com",
+  "connect-src 'self'",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "object-src 'none'"
+].join('; ');
+
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -54,7 +67,13 @@ const server = http.createServer(async (req, res) => {
   res.writeHead(200, {
     'Content-Type': TYPES[path.extname(file)] ?? 'application/octet-stream',
     // Always revalidate locally so edits show up on refresh.
-    'Cache-Control': 'no-cache'
+    'Cache-Control': 'no-cache',
+    // Mirrors the meta tag in index.html so local development behaves like the
+    // deployed site. frame-ancestors and X-Frame-Options are header-only, so they
+    // can be set here but not on GitHub Pages.
+    'Content-Security-Policy': `${CSP}; frame-ancestors 'none'`,
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'no-referrer'
   });
   createReadStream(file).pipe(res);
 });
