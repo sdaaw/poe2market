@@ -56,7 +56,15 @@ export function compact(n) {
  */
 export function price(divine, rates) {
   const unit = rates?.secondary ?? 'ex';
-  const small = divine * ((unit === 'chaos' ? rates?.chaos : rates?.exalted) ?? 0);
+  const per = (unit === 'chaos' ? rates?.chaos : rates?.exalted) ?? 0;
+
+  // A league poe.ninja has begun indexing but not yet priced has no conversion
+  // rate. Multiplying by it would quote "0 ex" for every cheap item — which on a
+  // launch-day league is nearly the whole table — so fall back to small Divine
+  // values, which are at least true.
+  if (!(per > 0)) return { value: fmt(divine), unit: 'div', alt: null };
+
+  const small = divine * per;
   if (divine >= 1) {
     return { value: fmt(divine), unit: 'div', alt: divine < 10 ? `${fmt(small)} ${unit}` : null };
   }

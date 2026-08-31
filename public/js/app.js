@@ -77,13 +77,15 @@ function paintChrome() {
     );
   }
 
+  // Only show a conversion we actually have. A freshly indexed league can arrive
+  // before its rates do, and "1 div = 0 ex" is worse than saying nothing.
   const r = state.snapshot?.rates;
   clear(ratesEl);
-  if (r) {
-    ratesEl.append(
-      el('span', {}, ['1 div = ', el('b', { text: `${fmt(r.exalted)} ex` })]),
-      el('span', {}, ['1 div = ', el('b', { text: `${fmt(r.chaos)} chaos` })])
-    );
+  if (r?.exalted > 0) {
+    ratesEl.append(el('span', {}, ['1 div = ', el('b', { text: `${fmt(r.exalted)} ex` })]));
+  }
+  if (r?.chaos > 0) {
+    ratesEl.append(el('span', {}, ['1 div = ', el('b', { text: `${fmt(r.chaos)} chaos` })]));
   }
 
   refreshBtn.classList.toggle('is-busy', state.loading);

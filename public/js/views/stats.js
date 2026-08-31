@@ -14,9 +14,15 @@ const median = (nums) => {
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 };
 
-/** The realm's small-change unit: Exalted in PoE2, Chaos in PoE1. */
-const smallUnit = (r) =>
-  r.secondary === 'chaos' ? { per: r.chaos, label: 'chaos' } : { per: r.exalted, label: 'ex' };
+/**
+ * The realm's small-change unit: Exalted in PoE2, Chaos in PoE1 — or Divine
+ * itself on a league poe.ninja has not yet published rates for, since converting
+ * by a rate of zero would report every figure as 0.
+ */
+const smallUnit = (r) => {
+  const unit = r.secondary === 'chaos' ? { per: r.chaos, label: 'chaos' } : { per: r.exalted, label: 'ex' };
+  return unit.per > 0 ? unit : { per: 1, label: 'div' };
+};
 
 const normaliseSlot = (slot) => {
   if (!slot) return 'Other';
