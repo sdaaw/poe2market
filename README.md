@@ -200,7 +200,7 @@ saturation and lightness are pinned to the gold accent's own, so any hue arrives
 as a sibling of the palette rather than a foreign colour, and the default hue
 reproduces the original gold exactly.
 
-Two things it deliberately leaves alone.  still colours unique item
+Two things it deliberately leaves alone. `--accent` still colours unique item
 names, because players read gold there as "this is a unique" and recolouring it
 would look broken rather than themed. And every available hue sits at least 25°
 from the loss red and 45° from the gain green, so a league tint can never be
@@ -209,7 +209,7 @@ mistaken for a price moving.
 Permanent leagues keep the default, so the tint reads as "this is the current
 challenge league". A league with no entry gets a stable colour derived from its
 name, which means a new one is themed the moment it appears rather than waiting
-for a deploy. See .
+for a deploy. See `public/js/league-theme.js`.
 
 ## While you were away
 
