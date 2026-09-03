@@ -17,6 +17,13 @@
   --down:      #c9584f;
   --radius:    10px;
   --shadow:    0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  /* League tint. Only the hue varies: saturation and lightness are pinned to the
+     gold accent's own, so any hue arrives as a sibling of the palette rather than
+     a foreign colour. The default hue reproduces #c9a227 exactly, which makes an
+     unthemed league byte-identical to how the site looked before. */
+  --league-h:   45.6;
+  --league:     hsl(var(--league-h) 67.5% 47%);
+  --league-dim: hsl(var(--league-h) 67.5% 33%);
   --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color-scheme: dark;
@@ -35,6 +42,8 @@
   --accent-dim:#c9a227;
   --up:        #2f7d51;
   --down:      #b1382e;
+  --league:     hsl(var(--league-h) 70% 34.5%);
+  --league-dim: hsl(var(--league-h) 67.5% 47%);
   --shadow:    0 1px 2px rgba(0,0,0,.04), 0 8px 24px -16px rgba(0,0,0,.18);
   color-scheme: light;
 }
@@ -70,6 +79,8 @@ button { font: inherit; color: inherit; }
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line-soft);
+  /* A hairline of the league's colour along the very top of the page. */
+  border-top: 2px solid var(--league);
 }
 
 .topbar__inner {
@@ -82,8 +93,8 @@ button { font: inherit; color: inherit; }
 
 .brand__mark {
   width: 20px; height: 20px; border-radius: 5px;
-  background: linear-gradient(140deg, var(--accent), var(--accent-dim));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+  background: linear-gradient(140deg, var(--league), var(--league-dim));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--league) 30%, transparent);
 }
 
 .brand__name { font-weight: 600; letter-spacing: -.01em; font-size: 15px; }
@@ -134,7 +145,7 @@ button { font: inherit; color: inherit; }
   transition: color .15s;
 }
 .tabs a:hover { color: var(--text); }
-.tabs a.is-active { color: var(--text); border-bottom-color: var(--accent); font-weight: 500; }
+.tabs a.is-active { color: var(--text); border-bottom-color: var(--league); font-weight: 500; }
 
 /* ---------- layout ---------- */
 

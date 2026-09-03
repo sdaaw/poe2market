@@ -7,6 +7,7 @@ import { renderUniques } from './views/uniques.js';
 import { renderCurrency } from './views/currency.js';
 import { renderStats } from './views/stats.js';
 import { mountInsight } from './insight.js';
+import { applyLeagueTheme } from './league-theme.js';
 
 const VIEWS = {
   overview: renderOverview,
@@ -69,6 +70,8 @@ function paintChrome() {
       )
     );
   }
+
+  applyLeagueTheme(state.league);
 
   const leagues = leaguesFor(state.realm);
   if (leagueSelect.value !== state.league || leagueSelect.options.length !== leagues.length) {

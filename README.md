@@ -192,6 +192,25 @@ at, and closing the panel leaves them there. The panel has a copy-link button.
   rather than just hiding, so the URL never disagrees with the screen.
 - A stale or unknown id drops the parameter instead of leaving a dead URL.
 
+## League tint
+
+The chrome carries a quiet per-league colour: the brand mark, the active tab
+underline and a hairline along the top of the header. Only the hue varies —
+saturation and lightness are pinned to the gold accent's own, so any hue arrives
+as a sibling of the palette rather than a foreign colour, and the default hue
+reproduces the original gold exactly.
+
+Two things it deliberately leaves alone.  still colours unique item
+names, because players read gold there as "this is a unique" and recolouring it
+would look broken rather than themed. And every available hue sits at least 25°
+from the loss red and 45° from the gain green, so a league tint can never be
+mistaken for a price moving.
+
+Permanent leagues keep the default, so the tint reads as "this is the current
+challenge league". A league with no entry gets a stable colour derived from its
+name, which means a new one is themed the moment it appears rather than waiting
+for a deploy. See .
+
 ## While you were away
 
 Every other view answers "what is true now". The Overview opens with what changed
