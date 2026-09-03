@@ -22,7 +22,10 @@ const HUES = {
   ember: 33,
   teal: 195,
   steel: 230,
-  violet: 265,
+  // Sampled from the Forbidden Rites event banner: a deep blue-violet, which the
+  // art pairs with gold lettering — the same pairing the site lands on, since
+  // unique names keep their gold.
+  violet: 262,
   magenta: 310
 };
 
@@ -34,13 +37,21 @@ const KNOWN = {
   Standard: HUES.gold,
   Hardcore: HUES.gold,
   'Runes of Aldur': HUES.gold,
-  'HC Runes of Aldur': HUES.gold,
   // PoE1's current league is named for its embers.
   Allflame: HUES.ember,
-  'Hardcore Allflame': HUES.ember
+  // Matched to the event banner's deep violet. Blood red would be the instinct
+  // for a rite, and is exactly the hue reserved for a price falling.
+  'Forbidden Rites': HUES.violet
 };
 
 const PALETTE = Object.values(HUES);
+
+/**
+ * A hardcore league is the same league. Both games mark it in the name — PoE2 as
+ * "HC Runes of Aldur", PoE1 as "Hardcore Allflame" — so strip that before looking
+ * anything up, or the two halves of one league would end up different colours.
+ */
+const parentLeague = (name) => name.replace(/^(HC|Hardcore)\s+/i, '').trim();
 
 /** Stable pick for a league we have no entry for, so a new one is themed on arrival. */
 function derive(name) {
@@ -49,7 +60,11 @@ function derive(name) {
   return PALETTE[hash % PALETTE.length];
 }
 
-export const hueFor = (league) => (league ? KNOWN[league] ?? derive(league) : HUES.gold);
+export function hueFor(league) {
+  if (!league) return HUES.gold;
+  const parent = parentLeague(league);
+  return KNOWN[parent] ?? derive(parent);
+}
 
 /** Applies the tint. Called whenever the selected league changes. */
 export function applyLeagueTheme(league) {
