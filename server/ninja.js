@@ -212,15 +212,32 @@ function priceBasis(core) {
  * reads them. PoE1 has to derive Exalted from the currency listing itself.
  */
 function ratesFrom(core, lines) {
+  // `core.rates` reads "how many of this per one primary unit", so when the
+  // primary already is Divine the numbers need no work.
   if (core?.primary === 'divine') {
     return { exalted: core.rates?.exalted ?? 0, chaos: core.rates?.chaos ?? 0 };
   }
-  const chaosPerDivine = core?.rates?.divine ? 1 / core.rates.divine : 0;
-  const exaltedInChaos = lines?.find((l) => l.id === 'exalted')?.primaryValue ?? 0;
-  return {
-    chaos: chaosPerDivine,
-    exalted: exaltedInChaos > 0 ? chaosPerDivine / exaltedInChaos : 0
+
+  // Otherwise rebase onto Divine by dividing through the divine entry. Which
+  // unit the primary is varies — Chaos in PoE1, Exalted in a PoE2 league young
+  // enough that Divine is not the common tender — so neither can be assumed.
+  const perDivine = core?.rates?.divine;
+  if (!(perDivine > 0)) return { exalted: 0, chaos: 0 };
+  const primaryPerDivine = 1 / perDivine;
+
+  // PoE1 publishes only a divine rate, so the other unit has to come from its
+  // own listing, which is priced in the primary unit.
+  const fromLine = (unit) => {
+    const inPrimary = lines?.find((l) => l.id === unit)?.primaryValue;
+    return inPrimary > 0 ? primaryPerDivine / inPrimary : 0;
   };
+
+  const resolve = (unit) => {
+    if (core.primary === unit) return primaryPerDivine;
+    return core.rates?.[unit] > 0 ? core.rates[unit] / perDivine : fromLine(unit);
+  };
+
+  return { exalted: resolve('exalted'), chaos: resolve('chaos') };
 }
 
 /* ---------- snapshot ---------- */
