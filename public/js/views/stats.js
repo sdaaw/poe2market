@@ -1,6 +1,6 @@
 import { el, fmt, compact, priceLabel, listingLabel, deltaEl, sparkline, section, statTile, barList } from '../util.js';
 import { openDetail } from '../detail.js';
-import { items, currency, rates, findCurrency, liquid, meaningful } from '../store.js';
+import { state, items, currency, rates, findCurrency, liquid, meaningful } from '../store.js';
 
 /* Item classes come through as "Ezomyte One Hand Sword"; the culture prefix is
    flavour, not a slot, so strip it when grouping. */
@@ -21,7 +21,7 @@ const median = (nums) => {
  */
 const smallUnit = (r) => {
   const unit = r.secondary === 'chaos' ? { per: r.chaos, label: 'chaos' } : { per: r.exalted, label: 'ex' };
-  return unit.per > 0 ? unit : { per: 1, label: 'div' };
+  return unit.per > 0 ? unit : { per: 1, label: r.base ?? 'div' };
 };
 
 const normaliseSlot = (slot) => {
@@ -54,6 +54,18 @@ export function renderStats() {
       })
     ])
   );
+
+  // Launch week: the league is trading currency but nobody has listed a unique
+  // yet. Every statistic below is drawn from that pool, so the page would be a
+  // wall of zeros — which reads as broken rather than as early.
+  if (!all.length) {
+    page.append(
+      el('div', { class: 'empty', style: 'padding:48px 0' }, [
+        `No uniques listed in ${state.league} yet. These statistics need a market to measure; check back once people are trading.`
+      ])
+    );
+    return page;
+  }
 
   /* ---- headline oddities ---- */
   page.append(
@@ -89,16 +101,23 @@ export function renderStats() {
   );
 
   /* ---- wealth pyramid ---- */
+  const base = r.base ?? 'div';
   const bands = [
-    { label: '1,000+ div', test: (i) => i.divine >= 1000 },
-    { label: '100 – 1,000 div', test: (i) => i.divine >= 100 && i.divine < 1000 },
-    { label: '10 – 100 div', test: (i) => i.divine >= 10 && i.divine < 100 },
-    { label: '1 – 10 div', test: (i) => i.divine >= 1 && i.divine < 10 },
-    { label: `1 ${unit.label} – 1 div`, test: (i) => i.divine * unit.per >= 1 && i.divine < 1 },
+    { label: `1,000+ ${base}`, test: (i) => i.divine >= 1000 },
+    { label: `100 – 1,000 ${base}`, test: (i) => i.divine >= 100 && i.divine < 1000 },
+    { label: `10 – 100 ${base}`, test: (i) => i.divine >= 10 && i.divine < 100 },
+    { label: `1 – 10 ${base}`, test: (i) => i.divine >= 1 && i.divine < 10 },
+    // On a league quoted in its own small unit there is no band between the two,
+    // so the sub-unit row would be an always-empty "1 ex – 1 ex".
+    unit.label !== base && {
+      label: `1 ${unit.label} – 1 ${base}`,
+      test: (i) => i.divine * unit.per >= 1 && i.divine < 1
+    },
     { label: `under 1 ${unit.label}`, test: (i) => i.divine * unit.per < 1 }
-  ].map((b) => {
+  ].filter(Boolean).map((b) => {
     const n = all.filter(b.test).length;
-    return { label: b.label, value: n, display: `${n} · ${((n / all.length) * 100).toFixed(1)}%` };
+    const share = ((n / Math.max(all.length, 1)) * 100).toFixed(1);
+    return { label: b.label, value: n, display: `${n} · ${share}%` };
   });
 
   page.append(
@@ -125,7 +144,7 @@ export function renderStats() {
     page.append(
       section(
         'One Mirror of Kalandra buys',
-        `at today's rate of ${fmt(mirror.divine)} div`,
+        `at today's rate of ${fmt(mirror.divine)} ${base}`,
         el('div', { class: 'card' }, [
           el(
             'div',

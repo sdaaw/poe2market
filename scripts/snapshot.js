@@ -82,7 +82,14 @@ async function buildRealm(realmId) {
     await write(modFile, mods);
 
     // History records prices, which live in the core half.
-    const hist = await updateHistory(snapshot, HISTORY, id);
+    //
+    // Skipped while a league is still priced in Exalted. Its first divine rate
+    // rebases every number by a factor of hundreds, and a series spanning that
+    // switch would draw a 99% crash on the day the league merely grew up. Those
+    // opening days are worth little anyway — near-nothing is listed yet.
+    const priced = snapshot.priceUnit === 'div';
+    if (!priced) process.stdout.write(`priced in ${snapshot.priceUnit}, no history yet … `);
+    const hist = priced ? await updateHistory(snapshot, HISTORY, id) : null;
     written.push({
       realm: realmId,
       realmLabel: cfg.label,
@@ -91,17 +98,19 @@ async function buildRealm(realmId) {
       name: league.name,
       file,
       mods: modFile,
-      history: hist.file
+      history: hist?.file ?? null
     });
 
     console.log(
       `${snapshot.items.length} items, ${snapshot.currency.length} currency -> ` +
         `data/${file} (${kb(core)}) + data/${modFile} (${kb(mods)})`
     );
-    console.log(
-      `      history: ${hist.days} day(s) since ${hist.since}, ${hist.series} series` +
-        (hist.isNewDay ? ' (new day)' : ' (today updated)')
-    );
+    if (hist) {
+      console.log(
+        `      history: ${hist.days} day(s) since ${hist.since}, ${hist.series} series` +
+          (hist.isNewDay ? ' (new day)' : ' (today updated)')
+      );
+    }
     for (const err of snapshot.errors) console.warn(`      ! ${err}`);
   }
   return written;

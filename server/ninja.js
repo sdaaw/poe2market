@@ -71,21 +71,27 @@ export async function fetchLeagues(realm) {
 }
 
 /**
- * Leagues worth fetching. PoE2 marks which it still indexes; PoE1 does not, so
- * there we take the current list and let empty responses fall out later.
+ * Leagues worth fetching: the current ones, minus the realm's permanent leagues.
+ *
+ * Deliberately not filtered on poe.ninja's `indexed` flag. That flag lags reality
+ * badly — it stayed false for Forbidden Rites while the league was already
+ * trading — and a league missing from this list is invisible on the site. Empty
+ * leagues cost one request each and are dropped by the caller once they come
+ * back with nothing, so erring towards including them is the cheap mistake.
  */
 export async function fetchIndexedLeagues(realm) {
   const cfg = REALMS[realm];
+  const permanent = new Set(cfg.permanentLeagues ?? []);
   try {
     const state = await getJson(`${cfg.base}/api/data/index-state`);
     const leagues = (state.economyLeagues ?? [])
-      .filter((l) => (cfg.respectIndexedFlag ? l.indexed : true))
-      .map((l) => ({ id: l.name, name: l.displayName ?? l.name }));
+      .map((l) => ({ id: l.name, name: l.displayName ?? l.name }))
+      .filter((l) => !permanent.has(l.id));
     if (leagues.length) return leagues;
   } catch {
     // fall through to the plain league list
   }
-  return fetchLeagues(realm);
+  return (await fetchLeagues(realm)).filter((l) => !permanent.has(l.id));
 }
 
 /* ---------- normalisation ---------- */
@@ -152,8 +158,13 @@ function normalisePoe1Items(payload, category) {
 /** Currency is the one shape both realms agree on. */
 function normaliseExchange(payload, category, mechanic, toDivine) {
   const meta = new Map((payload.items ?? []).map((i) => [i.id, i]));
+  const primary = payload.core?.primary;
   return payload.lines.map((line) => {
     const info = meta.get(line.id) ?? {};
+    // The unit of account carries no price of its own — it is the thing prices
+    // are quoted in — so the feed leaves it blank. It is worth exactly one of
+    // itself, and saying "0" instead puts the league's own currency last.
+    if (line.primaryValue == null && line.id === primary) line = { ...line, primaryValue: 1 };
     return {
       kind: 'currency',
       key: `${category}:${line.id}`,
@@ -171,14 +182,30 @@ function normaliseExchange(payload, category, mechanic, toDivine) {
   });
 }
 
+const UNIT_LABEL = { divine: 'div', exalted: 'ex', chaos: 'chaos' };
+
 /**
- * Divine-per-primary-unit for a response.
+ * How to read a response's prices: the multiplier that turns its primary unit
+ * into Divine, and the unit the result is actually in.
  *
- * PoE2 is already primary=divine, so the factor is 1. PoE1 is primary=chaos and
+ * PoE2 is normally primary=divine, so the factor is 1. PoE1 is primary=chaos and
  * publishes `rates.divine` as the divine value of one chaos, which is exactly
  * the multiplier we want.
+ *
+ * A league in its opening days is neither. Nobody has traded a Divine Orb yet,
+ * so poe.ninja answers in Exalted and publishes no divine rate at all — and the
+ * old code multiplied by that missing rate, which priced every line in the
+ * league at exactly zero. When there is no rate we keep the numbers in the unit
+ * they arrived in and report which one, so the site quotes "0.5 ex" instead of
+ * an entire economy of "0 div".
  */
-const divineFactor = (core) => (core?.primary === 'divine' ? 1 : core?.rates?.divine ?? 0);
+function priceBasis(core) {
+  const primary = core?.primary ?? null;
+  if (primary === 'divine') return { factor: 1, unit: 'div', primary };
+  const rate = core?.rates?.divine;
+  if (rate > 0) return { factor: rate, unit: 'div', primary };
+  return { factor: 1, unit: UNIT_LABEL[primary] ?? 'ex', primary };
+}
 
 /**
  * Rates expressed as "how many of this per one Divine", which is how the header
@@ -206,7 +233,48 @@ export async function fetchSnapshot(realm, league) {
   const cfg = REALMS[realm];
   const q = encodeURIComponent(league);
   const errors = [];
-  let rates = { exalted: 0, chaos: 0 };
+
+  const exchangeUrl = (type) =>
+    `${cfg.base}/api/economy/exchange/current/overview?league=${q}&type=${type}`;
+  const [anchorType, ...restTypes] = cfg.exchangeTypes;
+
+  // Currency is fetched alone and first. It is the only response carrying a
+  // usable exalted line, and on a league with no divine rate it decides which
+  // unit the whole snapshot is quoted in — which the other categories then have
+  // to agree with. One serial round-trip buys that consistency.
+  let anchor = null;
+  try {
+    anchor = await getJson(exchangeUrl(anchorType.type));
+  } catch (err) {
+    errors.push(`${anchorType.type}: ${err.message}`);
+  }
+
+  const basis = priceBasis(anchor?.core);
+  const rates = anchor ? ratesFrom(anchor.core, anchor.lines) : { exalted: 0, chaos: 0 };
+
+  /**
+   * Prefer a response's own rate, since a thin category can be quoted in a
+   * different unit from Currency. Only fall back to the snapshot's basis when
+   * the two agree on the unit — converting across a rate we do not have would
+   * be off by the divine price, which is a factor of hundreds.
+   */
+  function converterFor(core) {
+    const own = priceBasis(core);
+    if (own.unit === 'div') return (v) => v * own.factor;
+    if (own.primary === basis.primary) return (v) => v * basis.factor;
+    return null;
+  }
+
+  function convert(data, type, onConvert) {
+    const toDivine = converterFor(data.core);
+    if (!toDivine) {
+      // Unpriceable in the snapshot's unit. Publishing the raw numbers would
+      // quietly mix currencies in one table, so drop them and say why.
+      if (data.lines?.length) errors.push(`${type}: quoted in ${data.core?.primary}, no divine rate`);
+      return [];
+    }
+    return onConvert(toDivine);
+  }
 
   const itemJobs = cfg.itemTypes.map(({ type, label }) => async () => {
     try {
@@ -215,25 +283,17 @@ export async function fetchSnapshot(realm, league) {
       );
       // PoE1 lines already carry a divine value; PoE2 needs its response's factor.
       if (realm === 'poe1') return normalisePoe1Items(data, label);
-      const factor = divineFactor(data.core) || 1;
-      return normalisePoe2Items(data, label, (v) => v * factor);
+      return convert(data, type, (toDivine) => normalisePoe2Items(data, label, toDivine));
     } catch (err) {
       errors.push(`${type}: ${err.message}`);
       return [];
     }
   });
 
-  const exchangeJobs = cfg.exchangeTypes.map(({ type, label }) => async () => {
+  const exchangeJobs = restTypes.map(({ type, label }) => async () => {
     try {
-      const data = await getJson(
-        `${cfg.base}/api/economy/exchange/current/overview?league=${q}&type=${type}`
-      );
-      const factor = divineFactor(data.core);
-      // The Currency response is the one that carries a usable exalted line.
-      if (type === 'Currency' || rates.chaos === 0) {
-        rates = ratesFrom(data.core, data.lines);
-      }
-      return normaliseExchange(data, label, type, (v) => v * factor);
+      const data = await getJson(exchangeUrl(type));
+      return convert(data, type, (toDivine) => normaliseExchange(data, label, type, toDivine));
     } catch (err) {
       errors.push(`${type}: ${err.message}`);
       return [];
@@ -245,11 +305,20 @@ export async function fetchSnapshot(realm, league) {
     pooled(exchangeJobs).then((r) => r.flat())
   ]);
 
+  if (anchor) {
+    currency.push(
+      ...normaliseExchange(anchor, anchorType.label, anchorType.type, (v) => v * basis.factor)
+    );
+  }
+
   return {
     realm,
     league,
     updatedAt: new Date().toISOString(),
     rates,
+    // What `divine` on every line below is actually denominated in. Normally
+    // 'div'; 'ex' on a league too young to have a divine rate.
+    priceUnit: basis.unit,
     secondaryUnit: cfg.secondaryUnit,
     items: items.sort((a, b) => b.divine - a.divine),
     currency: currency.sort((a, b) => b.divine - a.divine),

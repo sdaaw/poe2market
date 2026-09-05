@@ -1,4 +1,4 @@
-import { el, clear, fmt, compact, priceLabel, priceCell, listingLabel, deltaEl, sparkline, itemCell, section, statTile } from '../util.js';
+import { el, clear, fmt, compact, priceLabel, priceCell, listingLabel, deltaEl, sparkline, itemCell, section, statTile, unitName } from '../util.js';
 import { createTable } from '../table.js';
 import { openDetail } from '../detail.js';
 import { items, currency, rates, findCurrency, liquid, meaningful } from '../store.js';
@@ -25,7 +25,7 @@ export function renderOverview() {
     el('div', { class: 'page-head' }, [
       el('h1', { text: 'The state of the economy' }),
       el('p', {
-        text: 'Every price below is a league-wide average from poe.ninja, quoted in Divine Orbs. Click any row to see the full item.'
+        text: `Every price below is a league-wide average from poe.ninja, quoted in ${unitName(r)}. Click any row to see the full item.`
       })
     ]),
     sinceSlot
@@ -34,20 +34,24 @@ export function renderOverview() {
   /* ---- headline numbers ---- */
   page.append(
     el('div', { class: 'grid grid--4', style: 'margin-bottom:44px' }, [
-      statTile('Divine Orb', fmt(r.exalted), 'ex', `also worth ${fmt(r.chaos)} chaos`),
+      // Until a league trades its first Divine Orb there is no rate to show, and
+      // "0 ex" would read as a price rather than an absence.
+      r.exalted > 0
+        ? statTile('Divine Orb', fmt(r.exalted), 'ex', `also worth ${fmt(r.chaos)} chaos`)
+        : statTile('Divine Orb', '—', '', 'not traded yet'),
       statTile(
         'Mirror of Kalandra',
         mirror ? fmt(mirror.divine) : '—',
-        'div',
+        r.base,
         mirror ? `${mirror.change > 0 ? '+' : ''}${mirror.change.toFixed(1)}% over 7 days` : 'not traded'
       ),
       statTile(
         'Priciest unique',
         top[0] ? fmt(top[0].divine) : '—',
-        'div',
+        r.base,
         top[0] ? top[0].name : ''
       ),
-      statTile('Weekly turnover', compact(turnover), 'div', 'across every tracked currency market')
+      statTile('Weekly turnover', compact(turnover), r.base, 'across every tracked currency market')
     ])
   );
 
@@ -67,7 +71,7 @@ export function renderOverview() {
                 it.icon && el('img', { class: 'podium__icon', src: it.icon, alt: '', loading: 'lazy' }),
                 el('div', { class: 'podium__name', text: it.name }),
                 el('div', { class: 'podium__base', text: it.baseType }),
-                el('div', { class: 'podium__price', text: `${fmt(it.divine)} div` }),
+                el('div', { class: 'podium__price', text: `${fmt(it.divine)} ${r.base}` }),
                 el('div', { class: 'podium__base', text: `${listingLabel(it.listings)} listed` })
               ])
             )
@@ -111,7 +115,7 @@ export function renderOverview() {
               c.icon && el('img', { class: 'row__icon', src: c.icon, alt: '', loading: 'lazy' }),
               el('div', { class: 'row__main' }, [
                 el('div', { class: 'row__label', text: c.name }),
-                el('div', { class: 'row__sub', text: `${fmt(c.volumeDivine)} div traded` })
+                el('div', { class: 'row__sub', text: `${fmt(c.volumeDivine)} ${r.base} traded` })
               ]),
               el('div', { class: 'price', text: priceLabel(c.divine, r) }),
               deltaEl(c.change)

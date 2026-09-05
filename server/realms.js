@@ -15,8 +15,13 @@ export const REALMS = {
     base: 'https://poe.ninja/poe2',
     // Exalted is the small change of PoE2; in PoE1 that role belongs to Chaos.
     secondaryUnit: 'ex',
-    // poe.ninja stops indexing the permanent leagues and answers with empty lists.
-    respectIndexedFlag: true,
+    // The permanent leagues are a different game economically — decade-old stock,
+    // no league mechanic, prices that barely move — so this site skips them.
+    // Everything else is kept if it returns data, which is what actually decides
+    // whether a league is live. poe.ninja's own `indexed` flag does not: it was
+    // false for Forbidden Rites for days after launch while the league was
+    // plainly trading, and false for HC Runes of Aldur months in.
+    permanentLeagues: ['Standard', 'Hardcore'],
 
     itemTypes: [
       { type: 'UniqueWeapons', label: 'Weapons' },
@@ -54,9 +59,9 @@ export const REALMS = {
     game: 'Path of Exile',
     base: 'https://poe.ninja/poe1',
     secondaryUnit: 'chaos',
-    // PoE1's index-state carries no `indexed` flag, so we fetch and keep whatever
-    // actually returns data.
-    respectIndexedFlag: false,
+    // PoE1's Standard is a genuine market people trade and price against, unlike
+    // PoE2's, so nothing is excluded here.
+    permanentLeagues: [],
 
     // Uniques only. BaseType (20k rare bases) and SkillGem (7.5k gem
     // permutations) are 13 MB between them and are a different kind of thing

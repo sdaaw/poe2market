@@ -42,6 +42,9 @@ export function openDetail(entry) {
   if (!goToItem(slugFor(entry))) showDetail(entry);
 }
 
+/** The unit the build priced this league in, spelled out for the price card. */
+const BASE_LABEL = { div: 'Divine', ex: 'Exalted', chaos: 'Chaos' };
+
 /** Side panel with the full item card: prices, mods, trend and flavour text. */
 export function showDetail(entry) {
   const r = rates();
@@ -60,20 +63,25 @@ export function showDetail(entry) {
       ])
     ]),
 
+    // A young league has no conversion rates, so the Exalted and Chaos columns
+    // would read a flat "0" for every item. An empty column is honest; a zero
+    // price is not.
     el('div', { class: 'detail__prices' }, [
       el('div', {}, [
-        el('div', { class: 'detail__price-label', text: 'Divine' }),
+        el('div', { class: 'detail__price-label', text: BASE_LABEL[r.base] ?? 'Divine' }),
         el('div', { class: 'detail__price-value', text: fmt(entry.divine) })
       ]),
-      el('div', {}, [
-        el('div', { class: 'detail__price-label', text: 'Exalted' }),
-        el('div', { class: 'detail__price-value', text: ex >= 10000 ? compact(ex) : fmt(ex) })
-      ]),
-      el('div', {}, [
-        el('div', { class: 'detail__price-label', text: 'Chaos' }),
-        el('div', { class: 'detail__price-value', text: chaos >= 10000 ? compact(chaos) : fmt(chaos) })
-      ])
-    ]),
+      r.exalted > 0 &&
+        el('div', {}, [
+          el('div', { class: 'detail__price-label', text: 'Exalted' }),
+          el('div', { class: 'detail__price-value', text: ex >= 10000 ? compact(ex) : fmt(ex) })
+        ]),
+      r.chaos > 0 &&
+        el('div', {}, [
+          el('div', { class: 'detail__price-label', text: 'Chaos' }),
+          el('div', { class: 'detail__price-value', text: chaos >= 10000 ? compact(chaos) : fmt(chaos) })
+        ])
+    ].filter(Boolean)),
 
     slot,
 

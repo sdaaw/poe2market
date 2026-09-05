@@ -54,19 +54,28 @@ export function compact(n) {
  * Exalted, which is how players actually quote cheap items. Past ~10 Divine the
  * Exalted equivalent runs into the hundreds of thousands, so we drop it.
  */
+/**
+ * Prose name for the unit a league is priced in. Divine everywhere except a
+ * league young enough that no Divine Orb has changed hands yet.
+ */
+const UNIT_NAME = { div: 'Divine Orbs', ex: 'Exalted Orbs', chaos: 'Chaos Orbs' };
+export const unitName = (rates) => UNIT_NAME[rates?.base ?? 'div'] ?? 'Divine Orbs';
+
 export function price(divine, rates) {
+  // `divine` is a misnomer on a launch-week league: with no Divine Orb traded
+  // yet, the build denominates everything in Exalted and says so here.
+  const base = rates?.base ?? 'div';
   const unit = rates?.secondary ?? 'ex';
   const per = (unit === 'chaos' ? rates?.chaos : rates?.exalted) ?? 0;
 
-  // A league poe.ninja has begun indexing but not yet priced has no conversion
-  // rate. Multiplying by it would quote "0 ex" for every cheap item — which on a
-  // launch-day league is nearly the whole table — so fall back to small Divine
-  // values, which are at least true.
-  if (!(per > 0)) return { value: fmt(divine), unit: 'div', alt: null };
+  // No conversion rate, either because the league is too young to have one or
+  // because it is already quoted in the small unit. Either way there is nothing
+  // to convert to, so quote the base figure, which is at least true.
+  if (!(per > 0) || base === unit) return { value: fmt(divine), unit: base, alt: null };
 
   const small = divine * per;
   if (divine >= 1) {
-    return { value: fmt(divine), unit: 'div', alt: divine < 10 ? `${fmt(small)} ${unit}` : null };
+    return { value: fmt(divine), unit: base, alt: divine < 10 ? `${fmt(small)} ${unit}` : null };
   }
   return { value: fmt(small), unit, alt: null };
 }

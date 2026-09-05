@@ -144,7 +144,9 @@ export const hasMods = () => Boolean(state.snapshot?.modsLoaded);
 export const rates = () => ({
   exalted: state.snapshot?.rates?.exalted ?? 0,
   chaos: state.snapshot?.rates?.chaos ?? 0,
-  secondary: state.snapshot?.secondaryUnit ?? 'ex'
+  secondary: state.snapshot?.secondaryUnit ?? 'ex',
+  // Usually Divine. A league that has not traded one yet is priced in Exalted.
+  base: state.snapshot?.priceUnit ?? 'div'
 });
 export const items = () => state.snapshot?.items ?? [];
 export const currency = () => state.snapshot?.currency ?? [];

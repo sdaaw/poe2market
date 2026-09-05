@@ -1,4 +1,4 @@
-import { el, fmt, priceCell, deltaEl, sparkline, itemCell, searchIcon } from '../util.js';
+import { el, fmt, priceCell, deltaEl, sparkline, itemCell, searchIcon, unitName } from '../util.js';
 import { createTable } from '../table.js';
 import { openDetail } from '../detail.js';
 import { currency, rates } from '../store.js';
@@ -14,7 +14,7 @@ export function renderCurrency() {
     el('div', { class: 'page-head' }, [
       el('h1', { text: 'Currency exchange' }),
       el('p', {
-        text: 'Orbs, runes, essences, omens and everything else players trade in bulk. "Traded" is the total value that changed hands this week, in Divine Orbs.'
+        text: `Orbs, runes, essences, omens and everything else players trade in bulk. "Traded" is the total value that changed hands this week, in ${unitName(r)}.`
       })
     ])
   );
