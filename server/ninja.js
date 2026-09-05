@@ -270,16 +270,24 @@ export async function fetchSnapshot(realm, league) {
   const rates = anchor ? ratesFrom(anchor.core, anchor.lines) : { exalted: 0, chaos: 0 };
 
   /**
-   * Prefer a response's own rate, since a thin category can be quoted in a
-   * different unit from Currency. Only fall back to the snapshot's basis when
-   * the two agree on the unit — converting across a rate we do not have would
-   * be off by the divine price, which is a factor of hundreds.
+   * Prefer a response's own rate, since a category can be quoted in a different
+   * unit from Currency — during a league's first week the currency market moves
+   * to Divine days before the item markets do, leaving uniques quoted in Exalted
+   * against a Currency response already talking in Divine.
+   *
+   * That gap is bridgeable: Currency publishes the exalted and chaos rates, so a
+   * response quoted in either can be converted even though it carries no rate of
+   * its own. Only a unit the anchor never priced is genuinely unconvertible.
    */
   function converterFor(core) {
     const own = priceBasis(core);
+    // Its own response is enough to reach Divine.
     if (own.unit === 'div') return (v) => v * own.factor;
-    if (own.primary === basis.primary) return (v) => v * basis.factor;
-    return null;
+    // The snapshot is quoted in that same unit, so the numbers already agree.
+    if (own.unit === basis.unit) return (v) => v;
+    // Otherwise cross via the rate the anchor established for that unit.
+    const perDivine = own.unit === 'ex' ? rates.exalted : own.unit === 'chaos' ? rates.chaos : 0;
+    return perDivine > 0 ? (v) => v / perDivine : null;
   }
 
   function convert(data, type, onConvert) {
